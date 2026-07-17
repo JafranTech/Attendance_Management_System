@@ -10,6 +10,7 @@ import type {
   SupabaseContext,
   SupabaseEnv,
 } from '@supabase/server'
+import type { Database } from "@/types/supabase"
 
 function resolveNextEnv(): Partial<SupabaseEnv> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -91,11 +92,11 @@ export async function createSupabaseContext(
     return { data: null, error }
   }
 
-  const supabase = createContextClient({
+  const supabase = createContextClient<Database>({
     auth: { token: auth!.token },
     env,
   })
-  const supabaseAdmin = createAdminClient({ env })
+  const supabaseAdmin = createAdminClient<Database>({ env })
 
   return {
     data: {
