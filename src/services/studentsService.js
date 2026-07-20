@@ -1,0 +1,72 @@
+import { supabase } from '../lib/supabase'
+
+export async function fetchStudentsForCourse(courseId) {
+  const { data, error } = await supabase
+    .from('course_students')
+    .select(`
+      student_id,
+      students (
+        id, roll_number, name, email, batch, created_at
+      )
+    `)
+    .eq('course_id', courseId)
+    .order('created_at', { ascending: true })
+
+  if (error) throw new Error('Unable to load students. Please refresh and try again.')
+  return data.map((row) => row.students)
+}
+
+export async function addStudentToCourse(courseId, { rollNumber, name, email, batch }) {
+  // Upsert student (by roll number)
+  const { data: student, error: studentError } = await supabase
+    .from('students')
+    .upsert({ roll_number: rollNumber, name, email, batch }, { onConflict: 'roll_number' })
+    .select()
+    .single()
+
+  if (studentError) throw new Error('Unable to save student. Please try again.')
+
+  // Link to course
+  const { error: linkError } = await supabase
+    .from('course_students')
+    .upsert({ course_id: courseId, student_id: student.id }, { onConflict: 'course_id,student_id' })
+
+  if (linkError) throw new Error('Unable to enroll student in course. Please try again.')
+  return student
+}
+
+export async function removeStudentFromCourse(courseId, studentId) {
+  const { error } = await supabase
+    .from('course_students')
+    .delete()
+    .match({ course_id: courseId, student_id: studentId })
+
+  if (error) throw new Error('Unable to remove student. Please try again.')
+}
+
+export async function bulkImportStudents(courseId, studentsArray) {
+  // Upsert all students
+  const { data: students, error: studentsError } = await supabase
+    .from('students')
+    .upsert(
+      studentsArray.map((s) => ({
+        roll_number: s.rollNumber,
+        name: s.name,
+        email: s.email || null,
+        batch: s.batch || null,
+      })),
+      { onConflict: 'roll_number' }
+    )
+    .select()
+
+  if (studentsError) throw new Error('Unable to import students. Please try again.')
+
+  // Link all to course
+  const links = students.map((s) => ({ course_id: courseId, student_id: s.id }))
+  const { error: linkError } = await supabase
+    .from('course_students')
+    .upsert(links, { onConflict: 'course_id,student_id' })
+
+  if (linkError) throw new Error('Unable to enroll imported students. Please try again.')
+  return students
+}

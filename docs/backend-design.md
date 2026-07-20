@@ -22,17 +22,11 @@ Supabase Project
 - **Faculty:** Sign in with college email + password via Supabase Auth.
 - *(Future)* **Students / Admin:** Will use role-based tables. For Version 1, assume all users are Faculty.
 
-### Login Flow (Next.js Server Actions)
+### Login Flow (React Client-Side)
 
-```ts
-// app/login/actions.ts
-'use server'
-
-import { createServerActionClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-
-export async function signIn(email, password) {
-  const supabase = createServerActionClient({ cookies })
+```jsx
+// src/contexts/AuthContext.jsx
+export const signIn = async (email, password) => {
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -43,22 +37,20 @@ export async function signIn(email, password) {
 }
 ```
 
-### Session Protection (Middleware)
+### Session Protection (React Router)
 
-```ts
-// middleware.ts
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
-import { NextResponse } from 'next/server'
+```jsx
+// src/routes/ProtectedRoute.jsx
+import { Navigate } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
-export async function middleware(req) {
-  const res = NextResponse.next()
-  const supabase = createMiddlewareClient({ req, res })
-  const { data: { session } } = await supabase.auth.getSession()
+export function ProtectedRoute({ children }) {
+  const { session, loading } = useAuth()
 
-  if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
-    return NextResponse.redirect(new URL('/login', req.url))
-  }
-  return res
+  if (loading) return <div>Loading...</div>
+  if (!session) return <Navigate to="/login" replace />
+
+  return children
 }
 ```
 
@@ -151,11 +143,11 @@ USING (
 
 ## Data Operation Patterns
 
-### Saving Attendance (Transactional approach via API or Server Action)
+### Saving Attendance (Client-Side API Call)
 
 Because saving attendance involves inserting into `attendance` and multiple rows into `attendance_details`, it should be handled robustly.
 
-```ts
+```js
 export async function saveAttendance(courseId, date, hour, studentStatuses) {
   // 1. Insert main attendance record
   const { data: attendanceRecord, error: attError } = await supabase
@@ -186,7 +178,7 @@ export async function saveAttendance(courseId, date, hour, studentStatuses) {
 
 When a faculty edits an existing attendance record, they must provide a reason.
 
-```ts
+```js
 export async function editAttendance(attendanceId, studentId, oldStatus, newStatus, reason) {
   // 1. Update the status
   const { error: updateError } = await supabase

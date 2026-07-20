@@ -23,17 +23,17 @@ Phase 8 — Testing & Deployment
 
 ## Phase 1 — Project Foundation & Authentication
 
-**Goal:** A working Next.js project with Supabase Auth integrated, allowing Faculty to log in and view a basic dashboard.
+**Goal:** A working React + Vite project with Supabase Auth integrated, allowing Faculty to log in and view a basic dashboard.
 
 **Deliverables:**
-- [ ] Next.js 15 App Router project setup (`npx create-next-app@latest`)
+- [ ] React + Vite project setup
 - [ ] Tailwind CSS + shadcn/ui configured
 - [ ] `lib/supabase/client.ts` and `lib/supabase/server.ts` created
 - [ ] Environment variables set (`.env.local`)
 - [ ] Supabase SQL schema for V1 (Faculty) created in DB
-- [ ] Login screen (`app/login/page.tsx`) with React Hook Form + Zod
-- [ ] Middleware to protect `/dashboard` routes
-- [ ] Basic Dashboard Layout (`app/dashboard/layout.tsx`) with Sidebar/Navbar
+- [ ] Login screen (`src/pages/LoginPage.jsx`) with React Hook Form + Zod
+- [ ] ProtectedRoute to protect `/dashboard` routes
+- [ ] Basic Dashboard Layout (`src/layouts/DashboardLayout.jsx`) with Sidebar/Navbar
 
 ---
 
@@ -42,13 +42,13 @@ Phase 8 — Testing & Deployment
 **Goal:** Faculty can add courses and enroll students into them via manual entry or Excel import.
 
 **Deliverables:**
-- [ ] `app/dashboard/courses/page.tsx` — List of courses
+- [ ] `src/pages/CoursesPage.jsx` — List of courses
 - [ ] Add Course Modal (Course Code, Name, Semester)
-- [ ] Course Details Page (`app/dashboard/courses/[id]/page.tsx`)
+- [ ] Course Details Page (`src/pages/CourseDetailPage.jsx`)
 - [ ] Student Management Tab inside Course Details
 - [ ] Manual Student Entry Form (Roll Number, Name, Email)
 - [ ] Bulk Student Import via Excel (using SheetJS to parse)
-- [ ] Supabase Hooks/Server Actions to save courses and map students (`course_students`)
+- [ ] Supabase Hooks/Client Services to save courses and map students (`course_students`)
 
 ---
 
@@ -59,7 +59,7 @@ Phase 8 — Testing & Deployment
 **Deliverables:**
 - [ ] Timetable Setup UI in Course Details (Select Day of Week and Hour)
 - [ ] Save timetable to Supabase `timetable` table
-- [ ] Holiday Management Page (`app/dashboard/settings/holidays/page.tsx`)
+- [ ] Holiday Management Page (`src/pages/SettingsPage.jsx`)
 - [ ] Add/Remove Holidays
 - [ ] Working Saturday Toggle / Management
 
@@ -70,7 +70,7 @@ Phase 8 — Testing & Deployment
 **Goal:** The primary functionality. Faculty can take attendance for a specific course and hour in under 3 taps.
 
 **Deliverables:**
-- [ ] Attendance Selection Screen (`app/dashboard/attendance/page.tsx`) — Pick Course, Date, and Hour
+- [ ] Attendance Selection Screen (`src/pages/AttendancePage.jsx`) — Pick Course, Date, and Hour
 - [ ] Validation: Prevent selecting future dates, holidays, or already marked hours
 - [ ] Attendance Marking Screen (Student List)
 - [ ] All students default to "Present"
@@ -85,7 +85,7 @@ Phase 8 — Testing & Deployment
 **Goal:** Faculty can view past attendance records and edit them with an audit trail.
 
 **Deliverables:**
-- [ ] History View (`app/dashboard/history/page.tsx`) — List of past sessions
+- [ ] History View (`src/pages/HistoryPage.jsx`) — List of past sessions
 - [ ] Session Detail View — Shows who was Present/Absent
 - [ ] Edit Mode — Allow changing a student's status
 - [ ] Prompt for "Reason for Edit" when saving changes
@@ -98,10 +98,10 @@ Phase 8 — Testing & Deployment
 **Goal:** Generate formal reports required by the college administration.
 
 **Deliverables:**
-- [ ] Reports Selection Screen (`app/dashboard/reports/page.tsx`) — Select Course, Date Range, Format
-- [ ] Excel Export Logic (`utils/exportExcel.ts`) using SheetJS
+- [ ] Reports Selection Screen (`src/pages/ReportsPage.jsx`) — Select Course, Date Range, Format
+- [ ] Excel Export Logic (`src/utils/exportExcel.js`) using SheetJS
 - [ ] Excel Format: Columns for Roll No, Name, Date/Hour, Status, Total %
-- [ ] PDF Export Logic (`utils/generatePdf.ts`) using jsPDF + AutoTable
+- [ ] PDF Export Logic (`src/utils/generatePdf.js`) using jsPDF + AutoTable
 - [ ] PDF Format: Header with College Logo, Faculty Name, Subject, Summary, and Signature Block
 - [ ] Client-side generation to ensure fast downloads
 
