@@ -9,12 +9,19 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
+      injectRegister: 'auto',
+      workbox: {
+        globPatterns: [], // Do not precache anything (online-only mode)
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+      },
       devOptions: {
         enabled: true
       },
       manifest: {
-        name: 'Faculty Attendance Management System',
-        short_name: 'Attendance',
+        name: 'Information Technology ERP',
+        short_name: 'IT ERP',
         description: 'Manage student attendance efficiently.',
         theme_color: '#ffffff',
         background_color: '#ffffff',

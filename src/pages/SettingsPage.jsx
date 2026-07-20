@@ -119,6 +119,30 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
+
+      {/* App Management */}
+      <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5 mt-6 mb-24 md:mb-6">
+        <h2 className="text-base font-semibold text-slate-900 mb-2">App Management</h2>
+        <p className="text-sm text-slate-500 mb-4">If you are not seeing the latest updates (like the new logo or app name), you can force the app to refresh its cache.</p>
+        <Button 
+          variant="outline" 
+          onClick={() => {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then((registrations) => {
+                for (let registration of registrations) {
+                  registration.unregister();
+                }
+                window.location.href = window.location.pathname + '?t=' + new Date().getTime();
+              });
+            } else {
+              window.location.href = window.location.pathname + '?t=' + new Date().getTime();
+            }
+          }}
+          className="w-full sm:w-auto text-blue-600 border-blue-200 hover:bg-blue-50"
+        >
+          Force Update App
+        </Button>
+      </div>
     </div>
   )
 }

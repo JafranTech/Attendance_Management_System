@@ -9,6 +9,8 @@ import AttendancePage from '../pages/AttendancePage'
 import HistoryPage from '../pages/HistoryPage'
 import ReportsPage from '../pages/ReportsPage'
 import SettingsPage from '../pages/SettingsPage'
+import { useAuth } from '../hooks/useAuth'
+import Logo from '../assets/Logo.jpeg'
 
 function ProtectedLayout({ children }) {
   return (
@@ -19,6 +21,23 @@ function ProtectedLayout({ children }) {
 }
 
 export function AppRouter() {
+  const { loading } = useAuth()
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 animate-pulse">
+        <img src={Logo} alt="IT Department Logo" className="w-32 h-32 object-contain mb-6 drop-shadow-md rounded-2xl" />
+        <h1 className="text-2xl font-extrabold text-slate-800 tracking-tight">Information Technology ERP</h1>
+        <p className="text-sm text-slate-500 font-medium mt-2 tracking-wide uppercase">Attendance Management System</p>
+        <div className="mt-8 flex gap-1.5">
+          <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+          <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+          <div className="w-2.5 h-2.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />

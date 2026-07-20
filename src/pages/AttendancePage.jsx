@@ -361,7 +361,7 @@ export default function AttendancePage() {
 
       {/* Sticky Save Button */}
       {students && students.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 md:left-64 z-30 bg-white/95 backdrop-blur border-t border-slate-100 px-3 py-3 md:px-8 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
+        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 z-30 bg-white/95 backdrop-blur border-t border-slate-100 px-3 py-3 md:px-8 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
           <div className="flex gap-2 sm:gap-3 max-w-2xl mx-auto">
             <Button
               variant="outline"

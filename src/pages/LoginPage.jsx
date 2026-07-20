@@ -4,8 +4,9 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import toast from 'react-hot-toast'
-import { LogIn, Loader2, BookCheck, Eye, EyeOff } from 'lucide-react'
+import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import Logo from '../assets/Logo.jpeg'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Label } from '../components/ui/Label'
@@ -52,11 +53,9 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="bg-indigo-600 p-3 rounded-2xl shadow-lg shadow-indigo-600/20 mb-4">
-            <BookCheck className="w-10 h-10 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 text-center">Faculty Portal</h1>
-          <p className="text-slate-500 mt-2 text-center text-sm">Attendance Management System</p>
+          <img src={Logo} alt="IT ERP Logo" className="w-20 h-20 object-contain rounded-2xl shadow-md mb-5" />
+          <h1 className="text-2xl font-bold text-slate-900 text-center tracking-tight">Information Technology ERP</h1>
+          <p className="text-slate-500 mt-2 text-center text-sm font-medium tracking-wide uppercase">Attendance Management System</p>
         </div>
 
         <Card className="border-none shadow-xl shadow-slate-200/50">

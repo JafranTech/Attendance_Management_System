@@ -115,7 +115,7 @@ export default function HistoryPage() {
                   </div>
                   <button
                     onClick={() => setEditRow(detail)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-blue-600 hover:bg-blue-50 px-3 py-2 rounded-lg transition-all opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100"
                   >
                     <Pencil className="w-3.5 h-3.5" />
                     Edit
