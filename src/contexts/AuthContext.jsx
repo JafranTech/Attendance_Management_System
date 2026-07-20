@@ -23,7 +23,7 @@ export function AuthProvider({ children }) {
 
   const signIn = async (email, password) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw new Error('Incorrect email or password.')
+    if (error) throw new Error(error.message)
     return data
   }
 

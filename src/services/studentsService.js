@@ -16,6 +16,16 @@ export async function fetchStudentsForCourse(courseId) {
   return data.map((row) => row.students)
 }
 
+export async function fetchAllStudents() {
+  const { data, error } = await supabase
+    .from('students')
+    .select('id, roll_number, name, email, batch')
+    .order('roll_number', { ascending: true })
+
+  if (error) throw new Error('Unable to load student list. Please refresh and try again.')
+  return data
+}
+
 export async function addStudentToCourse(courseId, { rollNumber, name, email, batch }) {
   // Upsert student (by roll number)
   const { data: student, error: studentError } = await supabase
@@ -42,6 +52,36 @@ export async function removeStudentFromCourse(courseId, studentId) {
     .match({ course_id: courseId, student_id: studentId })
 
   if (error) throw new Error('Unable to remove student. Please try again.')
+}
+
+export async function enrollDefaultStudents(courseId) {
+  // Fetch all students from master list
+  const { data: allStudents, error: fetchError } = await supabase
+    .from('students')
+    .select('id')
+
+  if (fetchError) throw new Error('Unable to fetch student list. Please try again.')
+
+  // Bulk link all students to the course
+  const links = allStudents.map((s) => ({ course_id: courseId, student_id: s.id }))
+  const { error: linkError } = await supabase
+    .from('course_students')
+    .upsert(links, { onConflict: 'course_id,student_id' })
+
+  if (linkError) throw new Error('Unable to enroll default students. Please try again.')
+  return allStudents.length
+}
+
+export async function enrollSelectedStudents(courseId, studentIds) {
+  if (!studentIds || studentIds.length === 0) return 0
+
+  const links = studentIds.map((id) => ({ course_id: courseId, student_id: id }))
+  const { error } = await supabase
+    .from('course_students')
+    .upsert(links, { onConflict: 'course_id,student_id' })
+
+  if (error) throw new Error('Unable to enroll selected students. Please try again.')
+  return studentIds.length
 }
 
 export async function bulkImportStudents(courseId, studentsArray) {
