@@ -1,5 +1,5 @@
 import { format, parseISO } from 'date-fns'
-import { Calendar, Clock, CheckCircle2, XCircle, ChevronRight } from 'lucide-react'
+import { Calendar, Clock, CheckCircle2, XCircle, ChevronRight, Users, CloudRain } from 'lucide-react'
 import clsx from 'clsx'
 
 export function SessionCard({ session, onClick }) {
@@ -9,49 +9,87 @@ export function SessionCard({ session, onClick }) {
   const total = details.length
   const attendanceRate = total > 0 ? Math.round((presentCount / total) * 100) : 0
 
+  const sessionDate = parseISO(session.date)
+
   return (
     <div
-      className="bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md hover:border-blue-100 transition-all duration-200 cursor-pointer"
+      className="bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-blue-200 transition-all duration-200 cursor-pointer overflow-hidden group"
       onClick={onClick}
     >
-      <div className="p-4">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            {session.courses && (
-              <p className="text-xs font-semibold text-blue-600 mb-1">{session.courses.course_code}</p>
-            )}
-            <div className="flex items-center gap-3 text-xs text-slate-500">
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3.5 h-3.5" />
-                {format(parseISO(session.date), 'dd MMM yyyy')}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                Hour {session.hour}
-              </span>
-            </div>
+      <div className="flex flex-col sm:flex-row items-center p-4 sm:p-5 gap-4 sm:gap-6">
+        
+        {/* Date Section (Prominent) */}
+        <div className="flex flex-row sm:flex-col items-center justify-between sm:justify-center w-full sm:w-32 bg-slate-50 sm:bg-transparent rounded-lg p-3 sm:p-0 border sm:border-none border-slate-100 shrink-0">
+          <div className="text-center">
+            <span className="block text-2xl font-bold text-slate-800 leading-none">
+              {format(sessionDate, 'dd')}
+            </span>
+            <span className="block text-sm font-semibold text-slate-500 uppercase tracking-widest mt-1">
+              {format(sessionDate, 'MMM yyyy')}
+            </span>
           </div>
-          <ChevronRight className="w-4 h-4 text-slate-300" />
-        </div>
-
-        <div className="flex items-center gap-3 mt-2">
-          <div className="flex items-center gap-1 text-xs text-green-600">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>{presentCount} Present</span>
-          </div>
-          <div className="flex items-center gap-1 text-xs text-red-500">
-            <XCircle className="w-3.5 h-3.5" />
-            <span>{absentCount} Absent</span>
-          </div>
-          <div className="ml-auto">
-            <span className={clsx(
-              'text-xs font-semibold px-2 py-0.5 rounded-full',
-              attendanceRate >= 75 ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-            )}>
-              {attendanceRate}%
+          <div className="text-right sm:text-center mt-0 sm:mt-2">
+            <span className="inline-block px-2.5 py-1 bg-blue-50 text-blue-700 font-semibold text-xs rounded-lg">
+              {format(sessionDate, 'EEEE')}
             </span>
           </div>
         </div>
+
+        {/* Divider */}
+        <div className="hidden sm:block w-px h-16 bg-slate-100"></div>
+
+        {/* Course & Time Details */}
+        <div className="flex-1 w-full min-w-0">
+          <div className="flex items-center gap-2 mb-2">
+            {session.courses && (
+              <span className="text-sm font-bold text-slate-900 truncate">
+                {session.courses.course_code} - {session.courses.course_name}
+              </span>
+            )}
+            <span className="flex items-center gap-1 text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">
+              <Clock className="w-3 h-3" /> Hour {session.hour}
+            </span>
+          </div>
+          
+          {/* Stats or Holiday Row */}
+          {session.is_holiday ? (
+            <div className="flex items-center gap-3 mt-3">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-800 rounded-lg text-sm font-bold">
+                <CloudRain className="w-4 h-4" />
+                <span>Holiday</span>
+              </div>
+              <span className="text-sm text-slate-600 font-medium">
+                {session.holiday_reason || 'No reason provided'}
+              </span>
+              <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors ml-auto hidden sm:block" />
+            </div>
+          ) : (
+            <div className="flex flex-wrap items-center gap-4 mt-3">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-slate-600">
+                <Users className="w-4 h-4 text-slate-400" />
+                <span>{total} Total</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-green-700 bg-green-50 px-2 py-0.5 rounded-md">
+                <CheckCircle2 className="w-4 h-4 text-green-600" />
+                <span>{presentCount} Present</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-sm font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded-md">
+                <XCircle className="w-4 h-4 text-red-600" />
+                <span>{absentCount} Absent</span>
+              </div>
+              <div className="sm:ml-auto flex items-center gap-3">
+                <span className={clsx(
+                  'text-sm font-bold px-3 py-1 rounded-lg',
+                  attendanceRate >= 75 ? 'bg-green-100 text-green-800' : 'bg-amber-100 text-amber-800'
+                )}>
+                  {attendanceRate}%
+                </span>
+                <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500 transition-colors hidden sm:block" />
+              </div>
+            </div>
+          )}
+        </div>
+        
       </div>
     </div>
   )

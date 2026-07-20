@@ -6,6 +6,7 @@ import {
   fetchAllHistory,
   fetchSessionDetails,
   editAttendanceDetail,
+  fetchStudentAttendance,
 } from '../services/attendanceService'
 import { useAuth } from './useAuth'
 
@@ -20,10 +21,11 @@ export function useCheckAttendance(courseId, date, hour) {
 export function useSaveAttendance() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ courseId, date, hour, studentStatuses }) =>
-      saveAttendance(courseId, date, hour, studentStatuses),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance-history'] })
+    mutationFn: ({ courseId, date, hour, studentStatuses, isHoliday, holidayReason }) =>
+      saveAttendance(courseId, date, hour, studentStatuses, isHoliday, holidayReason),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-history', variables.courseId] })
+      queryClient.invalidateQueries({ queryKey: ['attendance-history', 'all'] })
       queryClient.invalidateQueries({ queryKey: ['attendance-check'] })
       queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
@@ -63,5 +65,13 @@ export function useEditAttendance() {
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['session-details', vars.attendanceId] })
     },
+  })
+}
+
+export function useStudentAttendance(courseId, studentId) {
+  return useQuery({
+    queryKey: ['student-attendance', courseId, studentId],
+    queryFn: () => fetchStudentAttendance(courseId, studentId),
+    enabled: !!courseId && !!studentId,
   })
 }

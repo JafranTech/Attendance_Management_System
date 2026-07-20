@@ -11,16 +11,25 @@ import { Badge } from '../ui/Badge'
 import clsx from 'clsx'
 
 const schema = z.object({
-  reason: z.string().min(5, 'Please provide a reason (at least 5 characters)'),
+  reason: z.string().optional(),
 })
+
+const DEFAULT_REASONS = [
+  "Late coming",
+  "MC",
+  "OD",
+  "Not telling attendance"
+]
 
 export function EditAttendanceModal({ isOpen, onClose, attendanceId, detailRow }) {
   const [newStatus, setNewStatus] = useState(detailRow?.status || 'Present')
   const editAttendance = useEditAttendance()
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, setValue, watch } = useForm({
     resolver: zodResolver(schema),
   })
+
+  const currentReason = watch('reason') || ''
 
   const onSubmit = async ({ reason }) => {
     if (newStatus === detailRow.status) {
@@ -33,7 +42,7 @@ export function EditAttendanceModal({ isOpen, onClose, attendanceId, detailRow }
         studentId: detailRow.students.id,
         oldStatus: detailRow.status,
         newStatus,
-        reason,
+        reason: reason || 'Status updated manually',
       })
       toast.success('Attendance updated with audit log.')
       reset()
@@ -89,8 +98,22 @@ export function EditAttendanceModal({ isOpen, onClose, attendanceId, detailRow }
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-slate-600">Reason for Edit *</label>
+          <div className="space-y-2">
+            <label className="text-xs font-medium text-slate-600">Reason for Edit (Optional)</label>
+            
+            <div className="flex flex-wrap gap-2 mb-2">
+              {DEFAULT_REASONS.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setValue('reason', r)}
+                  className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs rounded-md transition-colors"
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+
             <textarea
               {...register('reason')}
               rows={3}

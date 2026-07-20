@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Calendar, Plus, Upload } from 'lucide-react'
+import { ArrowLeft, Users, Calendar, Plus, Upload, ClipboardCheck, Search } from 'lucide-react'
 import { useCourse } from '../hooks/useCourses'
 import { useStudents } from '../hooks/useStudents'
 import { StudentList } from '../components/students/StudentList'
@@ -21,9 +21,17 @@ export default function CourseDetailPage() {
   const [activeTab, setActiveTab] = useState('Students')
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const { data: course, isLoading: courseLoading, isError: courseError } = useCourse(courseId)
   const { data: students, isLoading: studentsLoading } = useStudents(courseId)
+
+  const filteredStudents = useMemo(() => {
+    if (!students) return []
+    if (!searchTerm) return students
+    const lower = searchTerm.toLowerCase()
+    return students.filter(s => s.name.toLowerCase().includes(lower) || s.roll_number.toLowerCase().includes(lower))
+  }, [students, searchTerm])
 
   if (courseLoading) return <LoadingSpinner fullPage />
   if (courseError) return (
@@ -82,15 +90,34 @@ export default function CourseDetailPage() {
       {/* Tab Content */}
       {activeTab === 'Students' && (
         <div>
-          <div className="flex items-center gap-3 mb-4">
-            <Button onClick={() => setIsAddStudentOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
-            </Button>
-            <Button variant="outline" onClick={() => setIsImportOpen(true)}>
-              <Upload className="w-4 h-4 mr-2" />
-              Import Excel
-            </Button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <div className="flex items-center gap-3">
+              <Button onClick={() => setIsAddStudentOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Student
+              </Button>
+              <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                <Upload className="w-4 h-4 mr-2" />
+                Import Excel
+              </Button>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search students..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
+                />
+              </div>
+              <Button onClick={() => navigate(`/attendance?courseId=${courseId}`)} className="bg-green-600 hover:bg-green-700 text-white">
+                <ClipboardCheck className="w-4 h-4 mr-2" />
+                Take Attendance
+              </Button>
+            </div>
           </div>
 
           {studentsLoading && <LoadingSpinner />}
@@ -114,7 +141,15 @@ export default function CourseDetailPage() {
           )}
 
           {!studentsLoading && students && students.length > 0 && (
-            <StudentList students={students} courseId={courseId} />
+            <>
+              {filteredStudents.length === 0 ? (
+                <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-100">
+                  <p className="text-slate-500">No students found matching "{searchTerm}"</p>
+                </div>
+              ) : (
+                <StudentList students={filteredStudents} courseId={courseId} />
+              )}
+            </>
           )}
         </div>
       )}
