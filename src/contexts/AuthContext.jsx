@@ -31,10 +31,15 @@ export function AuthProvider({ children }) {
     await supabase.auth.signOut()
   }
 
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (error) throw new Error(error.message)
+  }
+
   const loading = session === undefined
 
   return (
-    <AuthContext.Provider value={{ session, user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signIn, signOut, updatePassword }}>
       {children}
     </AuthContext.Provider>
   )

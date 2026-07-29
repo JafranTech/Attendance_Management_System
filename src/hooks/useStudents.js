@@ -20,8 +20,9 @@ export function useStudents(courseId) {
 export function useAllStudents() {
   return useQuery({
     queryKey: ['all-students'],
-    queryFn: fetchAllStudents,
+    queryFn: () => fetchAllStudents({ page: 0, pageSize: 50 }),
     staleTime: 1000 * 60 * 10, // 10 min — master list rarely changes
+    select: (result) => result.data, // unwrap to array for all consumers
   })
 }
 

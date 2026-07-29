@@ -16,14 +16,22 @@ export async function fetchStudentsForCourse(courseId) {
   return data.map((row) => row.students)
 }
 
-export async function fetchAllStudents() {
-  const { data, error } = await supabase
+export async function fetchAllStudents({ page = 0, pageSize = 50 } = {}) {
+  const from = page * pageSize
+  const to   = from + pageSize - 1
+
+  const { data, error, count } = await supabase
     .from('students')
-    .select('id, roll_number, name, email, batch')
+    .select('id, roll_number, name, email, batch', { count: 'exact' })
     .order('roll_number', { ascending: true })
+    .range(from, to)
 
   if (error) throw new Error('Unable to load student list. Please refresh and try again.')
-  return data
+  return {
+    data: data ?? [],
+    hasMore: count != null && to + 1 < count,
+    total: count ?? 0,
+  }
 }
 
 export async function addStudentToCourse(courseId, { rollNumber, name, email, batch }) {

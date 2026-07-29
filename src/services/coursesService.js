@@ -1,17 +1,22 @@
 import { supabase } from '../lib/supabase'
 
-export async function fetchCourses(facultyId) {
-  const { data, error } = await supabase
+export async function fetchCourses(facultyId, { page = 0, pageSize = 50 } = {}) {
+  const from = page * pageSize
+  const to   = from + pageSize - 1
+
+  const { data, error, count } = await supabase
     .from('courses')
-    .select(`
-      *,
-      course_students(count)
-    `)
+    .select('*, course_students(count)', { count: 'exact' })
     .eq('faculty_id', facultyId)
     .order('created_at', { ascending: false })
+    .range(from, to)
 
   if (error) throw new Error('Unable to load courses. Please refresh and try again.')
-  return data
+  return {
+    data: data ?? [],
+    hasMore: count != null && to + 1 < count,
+    total: count ?? 0,
+  }
 }
 
 export async function createCourse({ facultyId, courseCode, courseName, semester, enrollmentType = 'default' }) {

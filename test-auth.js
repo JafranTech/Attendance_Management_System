@@ -15,7 +15,8 @@ async function testAuth() {
   if (error) {
     console.error("Auth Error:", error.message, error.status)
   } else {
-    console.log("Auth Success:", data.user?.email)
+    console.log("Auth Success:", data.user?.e
+      mail)
   }
 }
 

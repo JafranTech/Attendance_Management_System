@@ -8,6 +8,7 @@ export function useCourses() {
     queryKey: ['courses', user?.id],
     queryFn: () => fetchCourses(user.id),
     enabled: !!user?.id,
+    select: (result) => result.data, // unwrap to array for all consumers
   })
 }
 

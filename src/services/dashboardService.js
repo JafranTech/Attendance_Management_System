@@ -63,52 +63,15 @@ export async function getAttendanceTrend(facultyId) {
 }
 
 export async function getLowAttendanceStudents(facultyId) {
-  // Fetch all attendance details for this faculty's courses
-  const { data } = await supabase
-    .from('attendance_details')
-    .select(`
-      status,
-      students(id, name, roll_number),
-      attendance(
-        course_id,
-        courses!inner(course_name, course_code, faculty_id)
-      )
-    `)
-    .eq('attendance.courses.faculty_id', facultyId)
-
-  if (!data) return []
-
-  // Aggregate per student per course
-  const key = (studentId, courseId) => `${studentId}::${courseId}`
-  const map = {}
-
-  data.forEach((row) => {
-    const studentId = row.students?.id
-    const courseId = row.attendance?.course_id
-    const course = row.attendance?.courses
-    if (!studentId || !courseId) return
-
-    const k = key(studentId, courseId)
-    if (!map[k]) {
-      map[k] = {
-        studentId,
-        name: row.students.name,
-        rollNumber: row.students.roll_number,
-        courseCode: course?.course_code,
-        courseName: course?.course_name,
-        present: 0,
-        total: 0,
-      }
-    }
-    map[k].total++
-    if (row.status === 'Present') map[k].present++
+  const { data, error } = await supabase.rpc('get_low_attendance_students', {
+    faculty_uuid: facultyId,
+    min_percentage: MIN_ATTENDANCE_PERCENTAGE,
   })
 
-  return Object.values(map)
-    .map((r) => ({ ...r, percentage: r.total > 0 ? Math.round((r.present / r.total) * 100) : 0 }))
-    .filter((r) => r.percentage < MIN_ATTENDANCE_PERCENTAGE)
-    .sort((a, b) => a.percentage - b.percentage)
+  if (error) throw new Error('Unable to load low attendance data.')
+  return data ?? []
 }
+
 
 export async function getTodaySchedule(facultyId) {
   const today = format(new Date(), 'yyyy-MM-dd')
