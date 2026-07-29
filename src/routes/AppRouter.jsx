@@ -9,6 +9,7 @@ import AttendancePage from '../pages/AttendancePage'
 import HistoryPage from '../pages/HistoryPage'
 import ReportsPage from '../pages/ReportsPage'
 import SettingsPage from '../pages/SettingsPage'
+import LowAttendancePage from '../pages/LowAttendancePage'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../assets/Logo.jpeg'
 
@@ -49,6 +50,7 @@ export function AppRouter() {
       <Route path="/history" element={<ProtectedLayout><HistoryPage /></ProtectedLayout>} />
       <Route path="/reports" element={<ProtectedLayout><ReportsPage /></ProtectedLayout>} />
       <Route path="/settings" element={<ProtectedLayout><SettingsPage /></ProtectedLayout>} />
+      <Route path="/low-attendance" element={<ProtectedLayout><LowAttendancePage /></ProtectedLayout>} />
     </Routes>
   )
 }

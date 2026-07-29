@@ -16,11 +16,11 @@ export function useDashboardStats() {
   })
 }
 
-export function useAttendanceTrend() {
+export function useAttendanceTrend(courseId = null) {
   const { user } = useAuth()
   return useQuery({
-    queryKey: ['dashboard', 'trend', user?.id],
-    queryFn: () => getAttendanceTrend(user.id),
+    queryKey: ['dashboard', 'trend', user?.id, courseId],
+    queryFn: () => getAttendanceTrend(user.id, courseId),
     enabled: !!user?.id,
   })
 }

@@ -24,11 +24,11 @@ export async function getDashboardStats(facultyId) {
   }
 }
 
-export async function getAttendanceTrend(facultyId) {
+export async function getAttendanceTrend(facultyId, courseId = null) {
   const days = 7
   const startDate = format(subDays(new Date(), days - 1), 'yyyy-MM-dd')
 
-  const { data } = await supabase
+  let query = supabase
     .from('attendance')
     .select(`
       date,
@@ -37,6 +37,13 @@ export async function getAttendanceTrend(facultyId) {
     `)
     .eq('courses.faculty_id', facultyId)
     .gte('date', startDate)
+
+  // Optionally filter to a specific course
+  if (courseId) {
+    query = query.eq('course_id', courseId)
+  }
+
+  const { data } = await query
 
   if (!data) return []
 

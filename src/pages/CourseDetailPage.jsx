@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Calendar, Plus, Upload, ClipboardCheck, Search } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Upload, ClipboardCheck, Search, AlertTriangle } from 'lucide-react'
+import clsx from 'clsx'
 import { useCourse } from '../hooks/useCourses'
 import { useStudents } from '../hooks/useStudents'
+import { useAllStudentPercentages } from '../hooks/useAttendance'
 import { StudentList } from '../components/students/StudentList'
 import { AddStudentModal } from '../components/students/AddStudentModal'
 import { ImportExcelModal } from '../components/students/ImportExcelModal'
@@ -11,9 +13,8 @@ import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
-import clsx from 'clsx'
 
-const TABS = ['Students', 'Timetable']
+const TABS = ['Students', 'Timetable', 'Low Attendance']
 
 export default function CourseDetailPage() {
   const { id: courseId } = useParams()
@@ -25,13 +26,28 @@ export default function CourseDetailPage() {
 
   const { data: course, isLoading: courseLoading, isError: courseError } = useCourse(courseId)
   const { data: students, isLoading: studentsLoading } = useStudents(courseId)
+  const { data: percentages, isLoading: percentagesLoading } = useAllStudentPercentages(courseId)
 
   const filteredStudents = useMemo(() => {
     if (!students) return []
     if (!searchTerm) return students
     const lower = searchTerm.toLowerCase()
-    return students.filter(s => s.name.toLowerCase().includes(lower) || s.roll_number.toLowerCase().includes(lower))
+    return students.filter(s =>
+      s.name.toLowerCase().includes(lower) || s.roll_number.toLowerCase().includes(lower)
+    )
   }, [students, searchTerm])
+
+  // Students below 75% for Low Attendance tab
+  const lowAttendanceStudents = useMemo(() => {
+    if (!students || !percentages) return []
+    return students
+      .filter((s) => {
+        const pct = percentages[s.id]
+        return pct !== undefined && pct < 75
+      })
+      .map((s) => ({ ...s, percentage: percentages[s.id] }))
+      .sort((a, b) => a.percentage - b.percentage) // lowest first
+  }, [students, percentages])
 
   if (courseLoading) return <LoadingSpinner fullPage />
   if (courseError) return (
@@ -71,20 +87,34 @@ export default function CourseDetailPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 bg-slate-100 p-1 rounded-xl mb-6 w-fit">
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={clsx(
-              'px-4 py-2 rounded-lg text-sm font-medium transition-all',
-              activeTab === tab
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-500 hover:text-slate-700'
-            )}
-          >
-            {tab}
-          </button>
-        ))}
+        {TABS.map((tab) => {
+          const isLowTab = tab === 'Low Attendance'
+          return (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={clsx(
+                'px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5',
+                activeTab === tab
+                  ? isLowTab
+                    ? 'bg-amber-500 text-white shadow-sm'
+                    : 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-700'
+              )}
+            >
+              {isLowTab && <AlertTriangle className="w-3.5 h-3.5" />}
+              {tab}
+              {isLowTab && !percentagesLoading && lowAttendanceStudents.length > 0 && (
+                <span className={clsx(
+                  'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
+                  activeTab === tab ? 'bg-white/30 text-white' : 'bg-amber-100 text-amber-700'
+                )}>
+                  {lowAttendanceStudents.length}
+                </span>
+              )}
+            </button>
+          )
+        })}
       </div>
 
       {/* Tab Content */}
@@ -101,7 +131,7 @@ export default function CourseDetailPage() {
                 Import Excel
               </Button>
             </div>
-            
+
             <div className="flex items-center gap-3">
               <div className="relative">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -155,6 +185,75 @@ export default function CourseDetailPage() {
       )}
 
       {activeTab === 'Timetable' && <TimetableTab courseId={courseId} />}
+
+      {activeTab === 'Low Attendance' && (
+        <div>
+          {(percentagesLoading || studentsLoading) && <LoadingSpinner />}
+
+          {!percentagesLoading && !studentsLoading && lowAttendanceStudents.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 bg-white border border-slate-100 rounded-2xl shadow-sm text-center px-4">
+              <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center mb-4">
+                <Users className="w-7 h-7 text-green-500" />
+              </div>
+              <p className="text-lg font-semibold text-slate-700">All Clear! 🎉</p>
+              <p className="text-sm text-slate-400 mt-1">All students in this course are above 75% attendance.</p>
+            </div>
+          )}
+
+          {!percentagesLoading && !studentsLoading && lowAttendanceStudents.length > 0 && (
+            <div className="bg-white border border-slate-100 rounded-2xl shadow-sm overflow-hidden">
+              {/* Header */}
+              <div className="px-5 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-semibold text-amber-800">
+                    {lowAttendanceStudents.length} student{lowAttendanceStudents.length !== 1 ? 's' : ''} below 75%
+                  </span>
+                </div>
+                <span className="text-xs text-amber-600">Sorted by lowest attendance</span>
+              </div>
+
+              <div className="divide-y divide-slate-50">
+                {lowAttendanceStudents.map((s, i) => (
+                  <div key={s.id} className="flex items-center justify-between px-5 py-4 hover:bg-slate-50/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm text-slate-400 font-medium w-5 text-right">{i + 1}</span>
+                      <div className={clsx(
+                        'w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0',
+                        s.percentage < 50 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                      )}>
+                        {s.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-slate-800">{s.name}</p>
+                        <p className="text-xs text-slate-400">{s.roll_number}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1.5 min-w-[80px]">
+                      <span className={clsx(
+                        'text-sm font-bold px-2.5 py-1 rounded-full',
+                        s.percentage < 50 ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                      )}>
+                        {s.percentage}%
+                      </span>
+                      <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                        <div
+                          className={clsx(
+                            'h-full rounded-full',
+                            s.percentage < 50 ? 'bg-red-400' : 'bg-amber-400'
+                          )}
+                          style={{ width: `${s.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Modals */}
       <AddStudentModal isOpen={isAddStudentOpen} onClose={() => setIsAddStudentOpen(false)} courseId={courseId} />

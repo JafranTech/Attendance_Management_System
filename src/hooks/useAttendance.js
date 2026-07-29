@@ -7,6 +7,7 @@ import {
   fetchSessionDetails,
   editAttendanceDetail,
   fetchStudentAttendance,
+  fetchAllStudentPercentages,
 } from '../services/attendanceService'
 import { useAuth } from './useAuth'
 
@@ -73,5 +74,18 @@ export function useStudentAttendance(courseId, studentId) {
     queryKey: ['student-attendance', courseId, studentId],
     queryFn: () => fetchStudentAttendance(courseId, studentId),
     enabled: !!courseId && !!studentId,
+  })
+}
+
+/**
+ * Fetches attendance percentage for ALL students in a course at once.
+ * Returns map: { [studentId]: percentage }
+ */
+export function useAllStudentPercentages(courseId) {
+  return useQuery({
+    queryKey: ['student-percentages', courseId],
+    queryFn: () => fetchAllStudentPercentages(courseId),
+    enabled: !!courseId,
+    staleTime: 1000 * 60 * 2, // 2 min — refresh after marking
   })
 }

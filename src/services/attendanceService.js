@@ -162,3 +162,48 @@ export async function fetchStudentAttendance(courseId, studentId) {
   if (error) throw new Error('Unable to load student attendance history.')
   return data
 }
+
+/**
+ * Bulk-fetch attendance percentages for ALL students in a course.
+ * Returns a map: { [studentId]: percentage (0-100) }
+ * Uses 2 queries total (not N queries per student).
+ */
+export async function fetchAllStudentPercentages(courseId) {
+  // 1. Get all non-holiday session IDs for this course
+  const { data: sessions, error: sessErr } = await supabase
+    .from('attendance')
+    .select('id')
+    .eq('course_id', courseId)
+    .eq('is_holiday', false)
+
+  if (sessErr) throw new Error('Unable to fetch session data.')
+  if (!sessions || sessions.length === 0) return {}
+
+  const sessionIds = sessions.map((s) => s.id)
+
+  // 2. Get all attendance_details for those sessions in one query
+  const { data: details, error: detErr } = await supabase
+    .from('attendance_details')
+    .select('student_id, status')
+    .in('attendance_id', sessionIds)
+
+  if (detErr) throw new Error('Unable to fetch attendance details.')
+
+  // 3. Compute per-student totals client-side
+  const studentMap = {}
+  details?.forEach((d) => {
+    if (!studentMap[d.student_id]) {
+      studentMap[d.student_id] = { present: 0, total: 0 }
+    }
+    studentMap[d.student_id].total++
+    if (d.status === 'Present') studentMap[d.student_id].present++
+  })
+
+  // 4. Convert to percentage map
+  const percentages = {}
+  Object.entries(studentMap).forEach(([studentId, { present, total }]) => {
+    percentages[studentId] = total > 0 ? Math.round((present / total) * 100) : 0
+  })
+
+  return percentages
+}

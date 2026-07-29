@@ -4,14 +4,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, isSunday, isAfter, startOfDay, parseISO, getDay } from 'date-fns'
-import { ClipboardCheck, ChevronRight, Loader2, Users, CheckCircle2, List, MousePointerClick, Zap, Calendar } from 'lucide-react'
+import {
+  ClipboardCheck, ChevronRight, Loader2, Users, CheckCircle2,
+  List, MousePointerClick, Zap, Calendar, CheckSquare,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 import { useCourses } from '../hooks/useCourses'
 import { useStudents } from '../hooks/useStudents'
 import { useHolidays } from '../hooks/useHolidays'
 import { useTimetable } from '../hooks/useTimetable'
-import { useCheckAttendance, useSaveAttendance } from '../hooks/useAttendance'
+import { useCheckAttendance, useSaveAttendance, useAllStudentPercentages } from '../hooks/useAttendance'
 import { StudentAttendanceRow } from '../components/attendance/StudentAttendanceRow'
 import { QuickEntryMode } from '../components/attendance/QuickEntryMode'
 import { InteractiveMode } from '../components/attendance/InteractiveMode'
@@ -37,7 +40,7 @@ export default function AttendancePage() {
   const [step, setStep] = useState('select') // 'select' | 'mark'
   const [selection, setSelection] = useState(null)
   const [statuses, setStatuses] = useState({})
-  
+
   // viewMode: 'list' | 'quick' | 'interactive'
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('attendanceViewMode') || 'list')
   const [isUnfilledPopupOpen, setIsUnfilledPopupOpen] = useState(false)
@@ -91,6 +94,9 @@ export default function AttendancePage() {
 
   const { data: students, isLoading: studentsLoading } = useStudents(selection?.courseId)
 
+  // Bulk fetch existing attendance percentages for the selected course
+  const { data: attendancePercentages } = useAllStudentPercentages(selection?.courseId)
+
   const validateDate = (date) => {
     if (!date) return null
     const parsed = parseISO(date)
@@ -110,7 +116,6 @@ export default function AttendancePage() {
     const course = courses?.find((c) => c.id === data.courseId)
     setSelection({ ...data, courseName: course?.course_name, hour: Number(data.hour) })
     setStep('mark')
-    // Reset statuses when changing selection
     setStatuses({})
   }
 
@@ -121,10 +126,19 @@ export default function AttendancePage() {
     }))
   }
 
+  // Mark ALL students as Present
+  const handlePresentAll = () => {
+    if (!students) return
+    const allPresent = {}
+    students.forEach((s) => { allPresent[s.id] = 'Present' })
+    setStatuses(allPresent)
+    toast.success('All students marked Present!', { icon: '✅' })
+  }
+
   const handleSaveClick = () => {
     if (!students || students.length === 0) return
     const unfilled = students.filter(s => !statuses[s.id])
-    
+
     if (unfilled.length > 0) {
       setIsUnfilledPopupOpen(true)
       return
@@ -174,6 +188,7 @@ export default function AttendancePage() {
   const absentCount = Object.values(statuses).filter((s) => s === 'Absent').length
   const unfilledCount = students ? students.length - (presentCount + absentCount) : 0
 
+  // ── STEP 1: SELECT COURSE ───────────────────────────────────────────────
   if (step === 'select') {
     return (
       <div className="max-w-lg">
@@ -251,7 +266,7 @@ export default function AttendancePage() {
     )
   }
 
-  // Mark step
+  // ── STEP 2: MARK ATTENDANCE ──────────────────────────────────────────────
   return (
     <div className="max-w-2xl">
       {/* Header */}
@@ -295,8 +310,8 @@ export default function AttendancePage() {
         <button
           onClick={() => setViewMode('list')}
           className={clsx(
-            "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all",
-            viewMode === 'list' ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+            'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            viewMode === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
           )}
         >
           <List className="w-4 h-4" /> <span className="hidden sm:inline">List View</span>
@@ -304,8 +319,8 @@ export default function AttendancePage() {
         <button
           onClick={() => setViewMode('quick')}
           className={clsx(
-            "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all",
-            viewMode === 'quick' ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+            'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            viewMode === 'quick' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
           )}
         >
           <Zap className="w-4 h-4" /> <span className="hidden sm:inline">Quick Entry</span>
@@ -313,8 +328,8 @@ export default function AttendancePage() {
         <button
           onClick={() => setViewMode('interactive')}
           className={clsx(
-            "flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all",
-            viewMode === 'interactive' ? "bg-white shadow-sm text-slate-900" : "text-slate-500 hover:text-slate-700"
+            'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all',
+            viewMode === 'interactive' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
           )}
         >
           <MousePointerClick className="w-4 h-4" /> <span className="hidden sm:inline">One-by-One</span>
@@ -343,7 +358,15 @@ export default function AttendancePage() {
 
           {viewMode === 'list' && (
             <>
-              <p className="text-xs text-slate-400 mb-3">Tap a student to toggle Present ↔ Absent</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs text-slate-400">Tap a student to toggle Present ↔ Absent</p>
+                {/* % legend */}
+                {attendancePercentages && Object.keys(attendancePercentages).length > 0 && (
+                  <p className="text-[10px] text-slate-400 hidden sm:block">
+                    Coloured badges show current attendance %
+                  </p>
+                )}
+              </div>
               <div className="space-y-2">
                 {students.map((student) => (
                   <StudentAttendanceRow
@@ -351,6 +374,7 @@ export default function AttendancePage() {
                     student={student}
                     status={statuses[student.id]}
                     onToggle={handleToggle}
+                    attendancePercent={attendancePercentages?.[student.id]}
                   />
                 ))}
               </div>
@@ -359,10 +383,11 @@ export default function AttendancePage() {
         </div>
       )}
 
-      {/* Sticky Save Button */}
+      {/* Sticky Save Button Bar */}
       {students && students.length > 0 && (
         <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 z-30 bg-white/95 backdrop-blur border-t border-slate-100 px-3 py-3 md:px-8 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
           <div className="flex gap-2 sm:gap-3 max-w-2xl mx-auto">
+            {/* Holiday Button */}
             <Button
               variant="outline"
               className="px-3 sm:px-4 shrink-0 text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-800"
@@ -372,11 +397,24 @@ export default function AttendancePage() {
               <Calendar className="w-4 h-4 mr-1.5 sm:mr-2" />
               <span className="text-sm font-semibold">Holiday</span>
             </Button>
-            
+
+            {/* Present All Button */}
+            <Button
+              variant="outline"
+              className="px-3 sm:px-4 shrink-0 text-green-700 border-green-200 bg-green-50 hover:bg-green-100 hover:text-green-800"
+              onClick={handlePresentAll}
+              disabled={saveAttendance.isPending}
+            >
+              <CheckSquare className="w-4 h-4 mr-1.5" />
+              <span className="text-sm font-semibold hidden sm:inline">Present All</span>
+              <span className="text-sm font-semibold sm:hidden">All</span>
+            </Button>
+
+            {/* Save Button */}
             <Button
               className={clsx(
-                "flex-1 transition-all duration-300 text-sm sm:text-base", 
-                unfilledCount > 0 ? "bg-slate-300 hover:bg-slate-400 text-slate-700" : ""
+                'flex-1 transition-all duration-300 text-sm sm:text-base',
+                unfilledCount > 0 ? 'bg-slate-300 hover:bg-slate-400 text-slate-700' : ''
               )}
               onClick={handleSaveClick}
               disabled={saveAttendance.isPending}
@@ -393,10 +431,10 @@ export default function AttendancePage() {
         </div>
       )}
 
-      <UnfilledPopup 
-        isOpen={isUnfilledPopupOpen} 
-        onClose={() => setIsUnfilledPopupOpen(false)} 
-        unfilledStudents={students?.filter(s => !statuses[s.id]) || []} 
+      <UnfilledPopup
+        isOpen={isUnfilledPopupOpen}
+        onClose={() => setIsUnfilledPopupOpen(false)}
+        unfilledStudents={students?.filter(s => !statuses[s.id]) || []}
       />
 
       <HolidayPopup
