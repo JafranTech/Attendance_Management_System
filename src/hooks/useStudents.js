@@ -1,12 +1,17 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   fetchStudentsForCourse,
+  fetchStudentsByClass,
   fetchAllStudents,
   addStudentToCourse,
+  addStudentToClass,
   removeStudentFromCourse,
+  removeStudentFromClass,
   bulkImportStudents,
+  bulkImportStudentsToClass,
   enrollDefaultStudents,
   enrollSelectedStudents,
+  updateStudentBatches,
 } from '../services/studentsService'
 
 export function useStudents(courseId) {
@@ -17,12 +22,20 @@ export function useStudents(courseId) {
   })
 }
 
+export function useClassStudents(classId) {
+  return useQuery({
+    queryKey: ['students', 'class', classId],
+    queryFn: () => fetchStudentsByClass(classId),
+    enabled: !!classId,
+  })
+}
+
 export function useAllStudents() {
   return useQuery({
     queryKey: ['all-students'],
     queryFn: () => fetchAllStudents({ page: 0, pageSize: 50 }),
-    staleTime: 1000 * 60 * 10, // 10 min — master list rarely changes
-    select: (result) => result.data, // unwrap to array for all consumers
+    staleTime: 1000 * 60 * 10,
+    select: (result) => result.data,
   })
 }
 
@@ -33,6 +46,17 @@ export function useAddStudent(courseId) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', courseId] })
       queryClient.invalidateQueries({ queryKey: ['courses'] })
+    },
+  })
+}
+
+export function useAddStudentToClass(classId) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (studentData) => addStudentToClass(classId, studentData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', 'class', classId] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
     },
   })
 }
@@ -48,6 +72,17 @@ export function useRemoveStudent(courseId) {
   })
 }
 
+export function useRemoveStudentFromClass(classId) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (studentId) => removeStudentFromClass(studentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', 'class', classId] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
+    },
+  })
+}
+
 export function useBulkImportStudents(courseId) {
   const queryClient = useQueryClient()
   return useMutation({
@@ -59,11 +94,22 @@ export function useBulkImportStudents(courseId) {
   })
 }
 
+export function useBulkImportStudentsToClass(classId) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (studentsArray) => bulkImportStudentsToClass(classId, studentsArray),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', 'class', classId] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
+    },
+  })
+}
+
 export function useEnrollDefaultStudents() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (courseId) => enrollDefaultStudents(courseId),
-    onSuccess: (_data, courseId) => {
+    mutationFn: ({ courseId, targetClassId }) => enrollDefaultStudents(courseId, targetClassId),
+    onSuccess: (_data, { courseId }) => {
       queryClient.invalidateQueries({ queryKey: ['students', courseId] })
       queryClient.invalidateQueries({ queryKey: ['courses'] })
     },
@@ -77,6 +123,16 @@ export function useEnrollSelectedStudents() {
     onSuccess: (_data, { courseId }) => {
       queryClient.invalidateQueries({ queryKey: ['students', courseId] })
       queryClient.invalidateQueries({ queryKey: ['courses'] })
+    },
+  })
+}
+
+export function useUpdateStudentBatches(courseId) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ studentIds, batch }) => updateStudentBatches(studentIds, batch),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', courseId] })
     },
   })
 }

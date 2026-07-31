@@ -19,7 +19,7 @@ export async function fetchCourses(facultyId, { page = 0, pageSize = 50 } = {}) 
   }
 }
 
-export async function createCourse({ facultyId, courseCode, courseName, semester, enrollmentType = 'default' }) {
+export async function createCourse({ facultyId, courseCode, courseName, semester, enrollmentType = 'default', targetClassId = null }) {
   const { data, error } = await supabase
     .from('courses')
     .insert({
@@ -28,6 +28,7 @@ export async function createCourse({ facultyId, courseCode, courseName, semester
       course_name: courseName,
       semester,
       enrollment_type: enrollmentType,
+      target_class_id: targetClassId,
     })
     .select()
     .single()

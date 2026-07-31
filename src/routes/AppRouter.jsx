@@ -10,6 +10,7 @@ import HistoryPage from '../pages/HistoryPage'
 import ReportsPage from '../pages/ReportsPage'
 import SettingsPage from '../pages/SettingsPage'
 import LowAttendancePage from '../pages/LowAttendancePage'
+import ClassesPage from '../pages/ClassesPage'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../assets/Logo.jpeg'
 
@@ -44,6 +45,7 @@ export function AppRouter() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
       <Route path="/dashboard" element={<ProtectedLayout><DashboardPage /></ProtectedLayout>} />
+      <Route path="/classes" element={<ProtectedLayout><ClassesPage /></ProtectedLayout>} />
       <Route path="/courses" element={<ProtectedLayout><CoursesPage /></ProtectedLayout>} />
       <Route path="/courses/:id" element={<ProtectedLayout><CourseDetailPage /></ProtectedLayout>} />
       <Route path="/attendance" element={<ProtectedLayout><AttendancePage /></ProtectedLayout>} />

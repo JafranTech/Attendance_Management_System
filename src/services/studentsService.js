@@ -6,7 +6,7 @@ export async function fetchStudentsForCourse(courseId) {
     .select(`
       student_id,
       students (
-        id, roll_number, name, email, batch, created_at
+        id, roll_number, name, email, batch, class_id, created_at
       )
     `)
     .eq('course_id', courseId)
@@ -16,13 +16,24 @@ export async function fetchStudentsForCourse(courseId) {
   return data.map((row) => row.students)
 }
 
+export async function fetchStudentsByClass(classId) {
+  const { data, error } = await supabase
+    .from('students')
+    .select('*')
+    .eq('class_id', classId)
+    .order('roll_number', { ascending: true })
+
+  if (error) throw new Error('Unable to load class students. Please refresh and try again.')
+  return data
+}
+
 export async function fetchAllStudents({ page = 0, pageSize = 50 } = {}) {
   const from = page * pageSize
   const to   = from + pageSize - 1
 
   const { data, error, count } = await supabase
     .from('students')
-    .select('id, roll_number, name, email, batch', { count: 'exact' })
+    .select('id, roll_number, name, email, batch, class_id', { count: 'exact' })
     .order('roll_number', { ascending: true })
     .range(from, to)
 
@@ -32,6 +43,17 @@ export async function fetchAllStudents({ page = 0, pageSize = 50 } = {}) {
     hasMore: count != null && to + 1 < count,
     total: count ?? 0,
   }
+}
+
+export async function addStudentToClass(classId, { rollNumber, name, email, batch }) {
+  const { data, error } = await supabase
+    .from('students')
+    .upsert({ roll_number: rollNumber, name, email, batch, class_id: classId }, { onConflict: 'roll_number' })
+    .select()
+    .single()
+
+  if (error) throw new Error('Unable to save student. Please try again.')
+  return data
 }
 
 export async function addStudentToCourse(courseId, { rollNumber, name, email, batch }) {
@@ -62,15 +84,25 @@ export async function removeStudentFromCourse(courseId, studentId) {
   if (error) throw new Error('Unable to remove student. Please try again.')
 }
 
-export async function enrollDefaultStudents(courseId) {
-  // Fetch all students from master list
-  const { data: allStudents, error: fetchError } = await supabase
+export async function removeStudentFromClass(studentId) {
+  const { error } = await supabase
     .from('students')
-    .select('id')
+    .delete()
+    .eq('id', studentId)
+
+  if (error) throw new Error('Unable to remove student. Please try again.')
+}
+
+export async function enrollDefaultStudents(courseId, targetClassId) {
+  let query = supabase.from('students').select('id')
+  if (targetClassId) {
+    query = query.eq('class_id', targetClassId)
+  }
+
+  const { data: allStudents, error: fetchError } = await query
 
   if (fetchError) throw new Error('Unable to fetch student list. Please try again.')
 
-  // Bulk link all students to the course
   const links = allStudents.map((s) => ({ course_id: courseId, student_id: s.id }))
   const { error: linkError } = await supabase
     .from('course_students')
@@ -90,6 +122,36 @@ export async function enrollSelectedStudents(courseId, studentIds) {
 
   if (error) throw new Error('Unable to enroll selected students. Please try again.')
   return studentIds.length
+}
+
+export async function bulkImportStudentsToClass(classId, studentsArray) {
+  const { data: students, error: studentsError } = await supabase
+    .from('students')
+    .upsert(
+      studentsArray.map((s) => ({
+        roll_number: s.rollNumber,
+        name: s.name,
+        email: s.email || null,
+        batch: s.batch || null,
+        class_id: classId,
+      })),
+      { onConflict: 'roll_number' }
+    )
+    .select()
+
+  if (studentsError) throw new Error('Unable to import students. Please try again.')
+  return students
+}
+
+export async function updateStudentBatches(studentIds, batch) {
+  if (!studentIds || studentIds.length === 0) return
+
+  const { error } = await supabase
+    .from('students')
+    .update({ batch })
+    .in('id', studentIds)
+
+  if (error) throw new Error('Unable to update student batches. Please try again.')
 }
 
 export async function bulkImportStudents(courseId, studentsArray) {

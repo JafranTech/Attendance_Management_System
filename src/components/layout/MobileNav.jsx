@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { LayoutDashboard, BookOpen, ClipboardCheck, History, FileText } from 'lucide-react'
+import { LayoutDashboard, BookOpen, ClipboardCheck, History, AlertTriangle } from 'lucide-react'
 import clsx from 'clsx'
 
 const tabs = [
@@ -7,7 +7,7 @@ const tabs = [
   { to: '/courses', icon: BookOpen, label: 'Courses' },
   { to: '/attendance', icon: ClipboardCheck, label: 'Attend' },
   { to: '/history', icon: History, label: 'History' },
-  { to: '/reports', icon: FileText, label: 'Reports' },
+  { to: '/low-attendance', icon: AlertTriangle, label: 'Low Attend' },
 ]
 
 export function MobileNav() {

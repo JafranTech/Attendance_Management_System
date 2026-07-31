@@ -4,13 +4,16 @@ import { Upload, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet } from 'luc
 import toast from 'react-hot-toast'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
-import { useBulkImportStudents } from '../../hooks/useStudents'
+import { useBulkImportStudents, useBulkImportStudentsToClass } from '../../hooks/useStudents'
 
-export function ImportExcelModal({ isOpen, onClose, courseId }) {
+export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
   const [preview, setPreview] = useState([])
   const [parseError, setParseError] = useState('')
   const fileInputRef = useRef(null)
-  const bulkImport = useBulkImportStudents(courseId)
+  
+  const bulkImportCourse = useBulkImportStudents(courseId)
+  const bulkImportClass = useBulkImportStudentsToClass(classId)
+  const bulkImport = classId ? bulkImportClass : bulkImportCourse
 
   const handleFile = (e) => {
     const file = e.target.files?.[0]

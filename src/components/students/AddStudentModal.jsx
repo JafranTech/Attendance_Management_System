@@ -7,7 +7,7 @@ import { Modal } from '../ui/Modal'
 import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
-import { useAddStudent } from '../../hooks/useStudents'
+import { useAddStudent, useAddStudentToClass } from '../../hooks/useStudents'
 
 const schema = z.object({
   rollNumber: z.string().min(1, 'Roll number is required'),
@@ -16,8 +16,10 @@ const schema = z.object({
   batch: z.string().optional(),
 })
 
-export function AddStudentModal({ isOpen, onClose, courseId }) {
-  const addStudent = useAddStudent(courseId)
+export function AddStudentModal({ isOpen, onClose, courseId, classId }) {
+  const addStudentCourse = useAddStudent(courseId)
+  const addStudentClass = useAddStudentToClass(classId)
+  const addStudent = classId ? addStudentClass : addStudentCourse
 
   const { register, handleSubmit, formState: { errors }, reset } = useForm({
     resolver: zodResolver(schema),

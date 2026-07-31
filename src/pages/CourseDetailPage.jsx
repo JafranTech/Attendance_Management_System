@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Plus, Upload, ClipboardCheck, Search, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Upload, ClipboardCheck, Search, AlertTriangle, Layers } from 'lucide-react'
 import clsx from 'clsx'
 import { useCourse } from '../hooks/useCourses'
 import { useStudents } from '../hooks/useStudents'
@@ -8,6 +8,7 @@ import { useAllStudentPercentages } from '../hooks/useAttendance'
 import { StudentList } from '../components/students/StudentList'
 import { AddStudentModal } from '../components/students/AddStudentModal'
 import { ImportExcelModal } from '../components/students/ImportExcelModal'
+import { AssignBatchesModal } from '../components/students/AssignBatchesModal'
 import { TimetableTab } from '../components/courses/TimetableTab'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
@@ -22,20 +23,44 @@ export default function CourseDetailPage() {
   const [activeTab, setActiveTab] = useState('Students')
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false)
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [isAssignBatchesOpen, setIsAssignBatchesOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
+  const [batchFilter, setBatchFilter] = useState('All') // 'All', 'Full Class', 'Batch 1', 'Batch 2'
 
   const { data: course, isLoading: courseLoading, isError: courseError } = useCourse(courseId)
   const { data: students, isLoading: studentsLoading } = useStudents(courseId)
   const { data: percentages, isLoading: percentagesLoading } = useAllStudentPercentages(courseId)
 
+  const { totalCount, noBatchCount, b1Count, b2Count } = useMemo(() => {
+    if (!students) return { totalCount: 0, noBatchCount: 0, b1Count: 0, b2Count: 0 }
+    let noBatchCount = 0
+    let b1Count = 0
+    let b2Count = 0
+    students.forEach(s => {
+      if (!s.batch || s.batch === 'Full Class') noBatchCount++
+      else if (s.batch === 'Batch 1') b1Count++
+      else if (s.batch === 'Batch 2') b2Count++
+    })
+    return { totalCount: students.length, noBatchCount, b1Count, b2Count }
+  }, [students])
+
   const filteredStudents = useMemo(() => {
     if (!students) return []
-    if (!searchTerm) return students
+    let list = students
+
+    if (batchFilter !== 'All') {
+      list = list.filter(s => {
+        if (batchFilter === 'Full Class') return !s.batch || s.batch === 'Full Class'
+        return s.batch === batchFilter
+      })
+    }
+
+    if (!searchTerm) return list
     const lower = searchTerm.toLowerCase()
-    return students.filter(s =>
+    return list.filter(s =>
       s.name.toLowerCase().includes(lower) || s.roll_number.toLowerCase().includes(lower)
     )
-  }, [students, searchTerm])
+  }, [students, searchTerm, batchFilter])
 
   // Students below 75% for Low Attendance tab
   const lowAttendanceStudents = useMemo(() => {
@@ -121,7 +146,7 @@ export default function CourseDetailPage() {
       {activeTab === 'Students' && (
         <div>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center flex-wrap gap-3">
               <Button onClick={() => setIsAddStudentOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Add Student
@@ -129,6 +154,10 @@ export default function CourseDetailPage() {
               <Button variant="outline" onClick={() => setIsImportOpen(true)}>
                 <Upload className="w-4 h-4 mr-2" />
                 Import Excel
+              </Button>
+              <Button variant="outline" onClick={() => setIsAssignBatchesOpen(true)} className="text-purple-600 hover:bg-purple-50 hover:border-purple-200">
+                <Layers className="w-4 h-4 mr-2" />
+                Assign Batches
               </Button>
             </div>
 
@@ -149,6 +178,24 @@ export default function CourseDetailPage() {
               </Button>
             </div>
           </div>
+
+          {/* Batch Filters */}
+          {!studentsLoading && students && students.length > 0 && (
+            <div className="flex items-center gap-2 mb-4">
+              <button onClick={() => setBatchFilter('All')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'All' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                All <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'All' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{totalCount}</span>
+              </button>
+              <button onClick={() => setBatchFilter('Full Class')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'Full Class' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                Full Class <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'Full Class' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{noBatchCount}</span>
+              </button>
+              <button onClick={() => setBatchFilter('Batch 1')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'Batch 1' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                Batch 1 <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'Batch 1' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{b1Count}</span>
+              </button>
+              <button onClick={() => setBatchFilter('Batch 2')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'Batch 2' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
+                Batch 2 <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'Batch 2' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{b2Count}</span>
+              </button>
+            </div>
+          )}
 
           {studentsLoading && <LoadingSpinner />}
 
@@ -174,7 +221,7 @@ export default function CourseDetailPage() {
             <>
               {filteredStudents.length === 0 ? (
                 <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-100">
-                  <p className="text-slate-500">No students found matching "{searchTerm}"</p>
+                  <p className="text-slate-500">No students found for this batch/search.</p>
                 </div>
               ) : (
                 <StudentList students={filteredStudents} courseId={courseId} />
@@ -258,6 +305,7 @@ export default function CourseDetailPage() {
       {/* Modals */}
       <AddStudentModal isOpen={isAddStudentOpen} onClose={() => setIsAddStudentOpen(false)} courseId={courseId} />
       <ImportExcelModal isOpen={isImportOpen} onClose={() => setIsImportOpen(false)} courseId={courseId} />
+      <AssignBatchesModal isOpen={isAssignBatchesOpen} onClose={() => setIsAssignBatchesOpen(false)} courseId={courseId} students={students} />
     </div>
   )
 }

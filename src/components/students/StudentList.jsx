@@ -1,17 +1,19 @@
 import { useState } from 'react'
 import { Trash2, GraduationCap } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { useRemoveStudent } from '../../hooks/useStudents'
+import { useRemoveStudent, useRemoveStudentFromClass } from '../../hooks/useStudents'
 import { Badge } from '../ui/Badge'
 import { StudentAttendanceModal } from './StudentAttendanceModal'
 
-export function StudentList({ students, courseId }) {
-  const removeStudent = useRemoveStudent(courseId)
+export function StudentList({ students, courseId, classId }) {
+  const removeStudentCourse = useRemoveStudent(courseId)
+  const removeStudentClass = useRemoveStudentFromClass(classId)
+  const removeStudent = classId ? removeStudentClass : removeStudentCourse
   const [selectedStudent, setSelectedStudent] = useState(null)
 
   const handleRemove = async (e, student) => {
     e.stopPropagation()
-    if (!confirm(`Remove ${student.name} from this course?`)) return
+    if (!confirm(`Remove ${student.name}?`)) return
     try {
       await removeStudent.mutateAsync(student.id)
       toast.success(`${student.name} removed.`)
@@ -47,7 +49,15 @@ export function StudentList({ students, courseId }) {
                 </td>
                 <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
                 <td className="px-4 py-3 text-slate-500 hidden sm:table-cell">{student.email || '—'}</td>
-                <td className="px-4 py-3 text-slate-500 hidden md:table-cell">{student.batch || '—'}</td>
+                <td className="px-4 py-3 text-slate-500 hidden md:table-cell">
+                  {student.batch ? (
+                    <Badge variant={student.batch.toLowerCase().includes('1') ? 'purple' : 'green'}>
+                      {student.batch}
+                    </Badge>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <button
                     onClick={(e) => handleRemove(e, student)}

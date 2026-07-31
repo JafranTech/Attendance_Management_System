@@ -10,9 +10,11 @@ import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { useCreateCourse } from '../../hooks/useCourses'
-import { useAllStudents, useEnrollDefaultStudents, useEnrollSelectedStudents } from '../../hooks/useStudents'
+import { useClassStudents, useEnrollDefaultStudents, useEnrollSelectedStudents } from '../../hooks/useStudents'
+import { useClasses } from '../../hooks/useClasses'
 
 const schema = z.object({
+  targetClassId: z.string().min(1, 'Target class is required'),
   courseCode: z.string().min(1, 'Course code is required').max(20),
   courseName: z.string().min(2, 'Course name is required').max(100),
   semester: z.string().optional(),
@@ -22,7 +24,7 @@ export function AddCourseModal({ isOpen, onClose }) {
   const createCourse = useCreateCourse()
   const enrollDefault = useEnrollDefaultStudents()
   const enrollSelected = useEnrollSelectedStudents()
-  const { data: allStudents = [], isLoading: studentsLoading } = useAllStudents()
+  const { data: classes = [] } = useClasses()
 
   const [step, setStep] = useState(1) // 1 = course info, 2 = student picker
   const [enrollmentType, setEnrollmentType] = useState('default')
@@ -30,17 +32,22 @@ export function AddCourseModal({ isOpen, onClose }) {
   const [search, setSearch] = useState('')
   const [createdCourse, setCreatedCourse] = useState(null)
   const [isEnrolling, setIsEnrolling] = useState(false)
+  const [selectedClassId, setSelectedClassId] = useState(null)
 
-  const { register, handleSubmit, formState: { errors }, reset } = useForm({
+  const { register, handleSubmit, formState: { errors }, reset, watch } = useForm({
     resolver: zodResolver(schema),
   })
 
+  // Watch for the targetClassId so we can fetch students for elective mode
+  const currentTargetClassId = watch('targetClassId')
+  const { data: classStudents = [], isLoading: studentsLoading } = useClassStudents(currentTargetClassId)
+
   const filteredStudents = useMemo(() => {
     const q = search.toLowerCase()
-    return allStudents.filter(
+    return classStudents.filter(
       (s) => s.name.toLowerCase().includes(q) || s.roll_number.toLowerCase().includes(q)
     )
-  }, [allStudents, search])
+  }, [classStudents, search])
 
   const handleClose = () => {
     reset()
@@ -49,6 +56,7 @@ export function AddCourseModal({ isOpen, onClose }) {
     setSelectedIds(new Set())
     setSearch('')
     setCreatedCourse(null)
+    setSelectedClassId(null)
     onClose()
   }
 
@@ -80,8 +88,8 @@ export function AddCourseModal({ isOpen, onClose }) {
 
       if (enrollmentType === 'default') {
         // Auto-enroll all students immediately
-        await enrollDefault.mutateAsync(course.id)
-        toast.success(`Course created! All 69 students enrolled.`)
+        await enrollDefault.mutateAsync({ courseId: course.id, targetClassId: data.targetClassId })
+        toast.success(`Course created and students enrolled!`)
         handleClose()
       } else {
         // Go to step 2 for manual selection
@@ -126,7 +134,7 @@ export function AddCourseModal({ isOpen, onClose }) {
       <div className="flex items-center gap-2 mb-5">
         <div className={clsx('flex items-center gap-1.5 text-xs font-medium', step === 1 ? 'text-indigo-600' : 'text-slate-400')}>
           <span className={clsx('w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold', step === 1 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-500')}>1</span>
-          Course Info
+          Course & Class Info
         </div>
         <div className="flex-1 h-px bg-slate-200" />
         <div className={clsx('flex items-center gap-1.5 text-xs font-medium', step === 2 ? 'text-indigo-600' : 'text-slate-400')}>
@@ -138,6 +146,24 @@ export function AddCourseModal({ isOpen, onClose }) {
       {/* ── STEP 1: Course Info ── */}
       {step === 1 && (
         <form onSubmit={handleSubmit(onStep1Submit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="targetClassId">Target Class / Section *</Label>
+            <select
+              id="targetClassId"
+              {...register('targetClassId')}
+              className={clsx(
+                "w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white",
+                errors.targetClassId ? 'border-red-400' : 'border-slate-200'
+              )}
+            >
+              <option value="">Select a class section...</option>
+              {classes.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            {errors.targetClassId && <p className="text-xs text-red-500">{errors.targetClassId.message}</p>}
+          </div>
+
           <div className="space-y-1.5">
             <Label htmlFor="courseCode">Course Code *</Label>
             <Input
@@ -167,7 +193,7 @@ export function AddCourseModal({ isOpen, onClose }) {
 
           {/* Enrollment Type Selector */}
           <div className="space-y-2">
-            <Label>Enrollment Type *</Label>
+            <Label>Course Type *</Label>
             <div className="grid grid-cols-2 gap-3">
               {/* Default Card */}
               <button
@@ -189,8 +215,8 @@ export function AddCourseModal({ isOpen, onClose }) {
                   <Users className={clsx('w-5 h-5', enrollmentType === 'default' ? 'text-indigo-600' : 'text-slate-500')} />
                 </div>
                 <div>
-                  <p className={clsx('text-sm font-semibold', enrollmentType === 'default' ? 'text-indigo-700' : 'text-slate-700')}>Default</p>
-                  <p className="text-xs text-slate-500 mt-0.5">All 69 students auto-enrolled</p>
+                  <p className={clsx('text-sm font-semibold', enrollmentType === 'default' ? 'text-indigo-700' : 'text-slate-700')}>Core Course</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Auto-enrolls whole section</p>
                 </div>
               </button>
 
@@ -201,21 +227,21 @@ export function AddCourseModal({ isOpen, onClose }) {
                 className={clsx(
                   'relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all text-center',
                   enrollmentType === 'elective'
-                    ? 'border-purple-500 bg-purple-50'
+                    ? 'border-slate-500 bg-slate-50'
                     : 'border-slate-200 bg-white hover:border-slate-300'
                 )}
               >
                 {enrollmentType === 'elective' && (
-                  <span className="absolute top-2 right-2 w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center">
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-slate-600 rounded-full flex items-center justify-center">
                     <Check className="w-2.5 h-2.5 text-white" />
                   </span>
                 )}
-                <div className={clsx('p-2 rounded-lg', enrollmentType === 'elective' ? 'bg-purple-100' : 'bg-slate-100')}>
-                  <BookOpen className={clsx('w-5 h-5', enrollmentType === 'elective' ? 'text-purple-600' : 'text-slate-500')} />
+                <div className={clsx('p-2 rounded-lg', enrollmentType === 'elective' ? 'bg-slate-200' : 'bg-slate-100')}>
+                  <BookOpen className={clsx('w-5 h-5', enrollmentType === 'elective' ? 'text-slate-700' : 'text-slate-500')} />
                 </div>
                 <div>
-                  <p className={clsx('text-sm font-semibold', enrollmentType === 'elective' ? 'text-purple-700' : 'text-slate-700')}>Elective</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Manually pick students</p>
+                  <p className={clsx('text-sm font-semibold', enrollmentType === 'elective' ? 'text-slate-800' : 'text-slate-700')}>Elective Course</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Select specific students</p>
                 </div>
               </button>
             </div>
@@ -225,12 +251,12 @@ export function AddCourseModal({ isOpen, onClose }) {
             <Button type="button" variant="outline" className="flex-1" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={isPendingStep1}>
+            <Button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700" disabled={isPendingStep1}>
               {isPendingStep1 ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{enrollmentType === 'default' ? 'Enrolling...' : 'Creating...'}</>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />{enrollmentType === 'default' ? 'Creating...' : 'Creating...'}</>
               ) : (
                 enrollmentType === 'default'
-                  ? 'Create & Enroll All'
+                  ? 'Create & Enroll Section'
                   : <><span>Next</span><ChevronRight className="w-4 h-4 ml-1" /></>
               )}
             </Button>
@@ -263,7 +289,7 @@ export function AddCourseModal({ isOpen, onClose }) {
               {allFilteredSelected ? 'Deselect All' : 'Select All'}
             </button>
             <span className="text-xs text-slate-500">
-              {selectedIds.size} of {allStudents.length} selected
+              {selectedIds.size} of {classStudents.length} selected
             </span>
           </div>
 
@@ -317,7 +343,7 @@ export function AddCourseModal({ isOpen, onClose }) {
             </Button>
             <Button
               type="button"
-              className="flex-1 bg-purple-600 hover:bg-purple-700"
+              className="flex-1 bg-indigo-600 hover:bg-indigo-700"
               disabled={isEnrolling || selectedIds.size === 0}
               onClick={onStep2Submit}
             >
