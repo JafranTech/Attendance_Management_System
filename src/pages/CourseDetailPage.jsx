@@ -181,12 +181,9 @@ export default function CourseDetailPage() {
 
           {/* Batch Filters */}
           {!studentsLoading && students && students.length > 0 && (
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
               <button onClick={() => setBatchFilter('All')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'All' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
                 All <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'All' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{totalCount}</span>
-              </button>
-              <button onClick={() => setBatchFilter('Full Class')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'Full Class' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
-                Full Class <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'Full Class' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{noBatchCount}</span>
               </button>
               <button onClick={() => setBatchFilter('Batch 1')} className={clsx("px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors", batchFilter === 'Batch 1' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')}>
                 Batch 1 <span className={clsx("ml-1 px-1.5 py-0.5 rounded-full", batchFilter === 'Batch 1' ? 'bg-slate-700 text-slate-300' : 'bg-slate-100 text-slate-500')}>{b1Count}</span>

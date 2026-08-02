@@ -57,10 +57,23 @@ export async function addStudentToClass(classId, { rollNumber, name, email, batc
 }
 
 export async function addStudentToCourse(courseId, { rollNumber, name, email, batch }) {
+  // Fetch existing class_id
+  const { data: existing } = await supabase
+    .from('students')
+    .select('class_id')
+    .eq('roll_number', rollNumber)
+    .maybeSingle()
+
   // Upsert student (by roll number)
   const { data: student, error: studentError } = await supabase
     .from('students')
-    .upsert({ roll_number: rollNumber, name, email, batch }, { onConflict: 'roll_number' })
+    .upsert({ 
+      roll_number: rollNumber, 
+      name, 
+      email, 
+      batch,
+      class_id: existing?.class_id || null
+    }, { onConflict: 'roll_number' })
     .select()
     .single()
 
@@ -91,6 +104,16 @@ export async function removeStudentFromClass(studentId) {
     .eq('id', studentId)
 
   if (error) throw new Error('Unable to remove student. Please try again.')
+}
+
+export async function bulkDeleteStudents(studentIds) {
+  if (!studentIds || studentIds.length === 0) return
+  const { error } = await supabase
+    .from('students')
+    .delete()
+    .in('id', studentIds)
+
+  if (error) throw new Error('Unable to delete students. Please try again.')
 }
 
 export async function enrollDefaultStudents(courseId, targetClassId) {
@@ -155,6 +178,18 @@ export async function updateStudentBatches(studentIds, batch) {
 }
 
 export async function bulkImportStudents(courseId, studentsArray) {
+  // Fetch existing class_ids
+  const rollNumbers = studentsArray.map(s => s.rollNumber)
+  const { data: existing } = await supabase
+    .from('students')
+    .select('roll_number, class_id')
+    .in('roll_number', rollNumbers)
+
+  const existingMap = {}
+  existing?.forEach(s => {
+    existingMap[s.roll_number] = s.class_id
+  })
+
   // Upsert all students
   const { data: students, error: studentsError } = await supabase
     .from('students')
@@ -164,6 +199,7 @@ export async function bulkImportStudents(courseId, studentsArray) {
         name: s.name,
         email: s.email || null,
         batch: s.batch || null,
+        class_id: existingMap[s.rollNumber] || null, // preserve existing class_id
       })),
       { onConflict: 'roll_number' }
     )

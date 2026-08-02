@@ -8,6 +8,7 @@ import {
   editAttendanceDetail,
   fetchStudentAttendance,
   fetchAllStudentPercentages,
+  deleteSession,
 } from '../services/attendanceService'
 import { useAuth } from './useAuth'
 
@@ -65,6 +66,17 @@ export function useEditAttendance() {
       editAttendanceDetail(attendanceId, studentId, oldStatus, newStatus, reason),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: ['session-details', vars.attendanceId] })
+    },
+  })
+}
+
+export function useDeleteSession() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (attendanceId) => deleteSession(attendanceId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attendance-history'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     },
   })
 }

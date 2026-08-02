@@ -31,24 +31,14 @@ export function QuickEntryMode({ students, statuses, setStatuses }) {
 
     // Then process absentees
     numbers.forEach(num => {
-      // Find a student where roll_number ends with this number (after padding or directly)
-      // The user wants: for 1 to 9, just type 1.
-      const isSingleDigit = num.length === 1 && !isNaN(num)
-      
       const matchedStudent = students.find(s => {
-        // Extract the last 2 digits of the roll number for comparison
-        const lastTwoStr = s.roll_number.slice(-2)
-        const lastTwoInt = parseInt(lastTwoStr, 10)
+        // Extract the trailing digits of the roll number.
+        // e.g. "IT2021001" -> "1". "IT2021035" -> "35". "IT2021115" -> "115"
+        const match = s.roll_number.match(/(\d+)$/)
+        if (!match) return false
+        const suffix = match[1]
         
-        const numInt = parseInt(num, 10)
-        
-        // If it's a valid integer comparison
-        if (!isNaN(lastTwoInt) && !isNaN(numInt)) {
-          return lastTwoInt === numInt
-        }
-        
-        // Fallback string matching
-        return s.roll_number.endsWith(num)
+        return parseInt(suffix, 10) === parseInt(num, 10)
       })
 
       if (matchedStudent) {

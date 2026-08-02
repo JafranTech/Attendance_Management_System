@@ -124,23 +124,24 @@ Phase 8 — Testing & Deployment
 **Goal:** Ensure the app is bug-free, responsive, and live.
 
 **Deliverables:**
-- [ ] Responsive UI testing (Mobile, Tablet, Desktop)
-- [ ] Edge cases tested (e.g., trying to mark attendance for empty courses)
-- [ ] Production build (`npm run build`)
-- [ ] Deploy to Vercel
-- [ ] Set production environment variables
+- [x] Responsive UI testing (Mobile, Tablet, Desktop)
+- [x] Edge cases tested (e.g., trying to mark attendance for empty courses)
+- [x] Production build (`npm run build`)
+- [x] Deploy to Vercel — **Live at `it-erp.vercel.app`**
+- [x] Set production environment variables (Supabase URL + Anon Key on Vercel)
 
 ---
 
 ## Current Phase Tracker
 
 ```
-Phase 1 — Project Foundation       [ ] In Progress  [ ] Complete
-Phase 2 — Course & Students        [ ] In Progress  [ ] Complete
-Phase 3 — Timetable & Holidays     [ ] In Progress  [ ] Complete
-Phase 4 — Core Attendance          [ ] In Progress  [ ] Complete
-Phase 5 — History & Edits          [ ] In Progress  [ ] Complete
-Phase 6 — Excel & PDF Reports      [ ] In Progress  [ ] Complete
-Phase 7 — Dashboard Analytics      [ ] In Progress  [ ] Complete
-Phase 8 — Testing & Deployment     [ ] In Progress  [ ] Complete
+Phase 1 — Project Foundation       [x] In Progress  [x] Complete
+Phase 2 — Course & Students        [x] In Progress  [x] Complete
+Phase 3 — Timetable & Holidays     [x] In Progress  [x] Complete
+Phase 4 — Core Attendance          [x] In Progress  [x] Complete
+Phase 5 — History & Edits          [x] In Progress  [x] Complete
+Phase 6 — Excel & PDF Reports      [x] In Progress  [x] Complete
+Phase 7 — Dashboard Analytics      [x] In Progress  [x] Complete
+Phase 8 — Testing & Deployment     [x] In Progress  [x] Complete ← LIVE: it-erp.vercel.app
 ```
+

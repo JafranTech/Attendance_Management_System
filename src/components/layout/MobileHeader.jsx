@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { BookCheck, Menu, X } from 'lucide-react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import {
-  LayoutDashboard, BookOpen, ClipboardCheck, History, FileText, Settings, LogOut,
+  LayoutDashboard, BookOpen, ClipboardCheck, History, FileText, Settings, LogOut, Users, AlertTriangle
 } from 'lucide-react'
 import Logo from '../../assets/Logo.jpeg'
 import { useAuth } from '../../hooks/useAuth'
@@ -10,9 +10,11 @@ import clsx from 'clsx'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/classes', icon: Users, label: 'Classes & Rosters' },
   { to: '/courses', icon: BookOpen, label: 'Courses' },
   { to: '/attendance', icon: ClipboardCheck, label: 'Attendance' },
   { to: '/history', icon: History, label: 'History' },
+  { to: '/low-attendance', icon: AlertTriangle, label: 'Low Attendance' },
   { to: '/reports', icon: FileText, label: 'Reports' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ]

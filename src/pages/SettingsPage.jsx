@@ -220,7 +220,7 @@ export default function SettingsPage() {
                 <button
                   onClick={() => handleDelete(h)}
                   disabled={deleteHoliday.isPending}
-                  className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all md:opacity-0 md:group-hover:opacity-100"
                   aria-label="Remove holiday"
                 >
                   <Trash2 className="w-4 h-4" />

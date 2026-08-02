@@ -13,6 +13,10 @@ auth.users (Supabase managed)
     │
     └──▶ faculty (1:1)
             │
+            ├──▶ classes (1:many)
+            │       │
+            │       └──▶ students (1:many per class)
+            │
             └──▶ courses (1:many)
                     │
                     ├──▶ course_students (many:many bridge to students)
@@ -43,12 +47,27 @@ CREATE TABLE faculty (
 ALTER TABLE faculty ENABLE ROW LEVEL SECURITY;
 ```
 
+### Table: `classes`
+Master list of class sections managed by a faculty.
+
+```sql
+CREATE TABLE classes (
+  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  faculty_id   uuid NOT NULL REFERENCES faculty(id) ON DELETE CASCADE,
+  name         text NOT NULL,
+  created_at   timestamptz DEFAULT now()
+);
+
+ALTER TABLE classes ENABLE ROW LEVEL SECURITY;
+```
+
 ### Table: `students`
-Master list of all students.
+Master list of all students belonging to a specific class section.
 
 ```sql
 CREATE TABLE students (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id     uuid NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
   roll_number  text NOT NULL UNIQUE,
   name         text NOT NULL,
   email        text,
@@ -107,11 +126,12 @@ ALTER TABLE timetable ENABLE ROW LEVEL SECURITY;
 ```
 
 ### Table: `holidays`
-System-wide or department-wide holidays to prevent attendance marking.
+System-wide or faculty-wide holidays to prevent attendance marking.
 
 ```sql
 CREATE TABLE holidays (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  faculty_id   uuid REFERENCES auth.users(id) ON DELETE CASCADE,
   date         date NOT NULL UNIQUE,
   description  text NOT NULL,
   created_at   timestamptz DEFAULT now()
@@ -125,11 +145,13 @@ Main record for a specific class session.
 
 ```sql
 CREATE TABLE attendance (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  course_id    uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-  date         date NOT NULL,
-  hour         integer NOT NULL CHECK (hour > 0),
-  created_at   timestamptz DEFAULT now(),
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id      uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  date           date NOT NULL,
+  hour           integer NOT NULL CHECK (hour > 0),
+  is_holiday     boolean DEFAULT false,
+  holiday_reason text,
+  created_at     timestamptz DEFAULT now(),
   UNIQUE(course_id, date, hour) -- Prevent duplicate attendance for same hour
 );
 

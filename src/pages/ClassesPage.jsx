@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react'
 import { Plus, FileSpreadsheet, GraduationCap, Loader2, Users, Search, X, Trash2, ChevronDown } from 'lucide-react'
 import { useClasses, useCreateClass, useDeleteClass } from '../hooks/useClasses'
-import { useClassStudents } from '../hooks/useStudents'
+import { useClassStudents, useBulkDeleteStudents } from '../hooks/useStudents'
 import { ImportExcelModal } from '../components/students/ImportExcelModal'
 import { AddStudentModal } from '../components/students/AddStudentModal'
 import { StudentList } from '../components/students/StudentList'
@@ -35,7 +35,7 @@ export default function ClassesPage() {
   const createClass = useCreateClass()
   const deleteClass = useDeleteClass()
 
-  const [activeClassId, setActiveClassId] = useState(null)
+  const [activeClassId, setActiveClassId] = useState(() => localStorage.getItem('activeClassId') || null)
   const [isImportModalOpen, setImportModalOpen] = useState(false)
   const [isAddStudentModalOpen, setAddStudentModalOpen] = useState(false)
 
@@ -47,14 +47,18 @@ export default function ClassesPage() {
   // Search
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Delete
+  // Delete class
   const [deletingClassId, setDeletingClassId] = useState(null)
+
+  // Bulk select students
+  const [selectedStudentIds, setSelectedStudentIds] = useState(new Set())
 
   const inputRef = useRef(null)
 
   // Use first class as active if none selected
   const currentClassId = activeClassId || (classes?.length > 0 ? classes[0].id : null)
   const { data: students, isLoading: studentsLoading } = useClassStudents(currentClassId)
+  const bulkDelete = useBulkDeleteStudents(currentClassId)
   const activeClass = classes?.find((c) => c.id === currentClassId)
 
   // Filter suggestions based on typed text and exclude already existing classes
@@ -70,8 +74,8 @@ export default function ClassesPage() {
     setTimeout(() => inputRef.current?.focus(), 50)
   }
 
-  const handleSave = async (nameToSave = newClassName) => {
-    const trimmed = nameToSave.trim()
+  const handleCreateClass = async (nameToSave = newClassName) => {
+    const trimmed = (typeof nameToSave === 'string' ? nameToSave : newClassName).trim()
     if (!trimmed) {
       setIsAddingClass(false)
       setNewClassName('')
@@ -81,6 +85,8 @@ export default function ClassesPage() {
     try {
       const created = await createClass.mutateAsync(trimmed)
       setActiveClassId(created.id)
+      localStorage.setItem('activeClassId', created.id)
+      setSelectedStudentIds(new Set())
       toast.success(`"${trimmed}" created!`)
     } catch (e) {
       toast.error(e.message || 'Failed to create class.')
@@ -92,7 +98,7 @@ export default function ClassesPage() {
   }
 
   const handleSelectPreset = (preset) => {
-    handleSave(preset)
+    handleCreateClass(preset)
   }
 
   const handleDeleteClass = async (e, classId, className) => {
@@ -101,10 +107,11 @@ export default function ClassesPage() {
     setDeletingClassId(classId)
     try {
       await deleteClass.mutateAsync(classId)
-      // If we deleted the active class, reset
       if (currentClassId === classId) {
         setActiveClassId(null)
+        localStorage.removeItem('activeClassId')
       }
+      setSelectedStudentIds(new Set())
       toast.success(`"${className}" deleted.`)
     } catch (err) {
       toast.error(err.message || 'Failed to delete class.')
@@ -113,11 +120,49 @@ export default function ClassesPage() {
     }
   }
 
+  const handleToggleStudent = (studentId) => {
+    setSelectedStudentIds(prev => {
+      const next = new Set(prev)
+      if (next.has(studentId)) next.delete(studentId)
+      else next.add(studentId)
+      return next
+    })
+  }
+
+  const handleSelectAll = (visibleStudents) => {
+    const allSelected = visibleStudents.every(s => selectedStudentIds.has(s.id))
+    if (allSelected) {
+      setSelectedStudentIds(new Set())
+    } else {
+      setSelectedStudentIds(new Set(visibleStudents.map(s => s.id)))
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    const count = selectedStudentIds.size
+    if (!confirm(`Permanently delete ${count} selected student${count !== 1 ? 's' : ''} and all their data?`)) return
+    try {
+      await bulkDelete.mutateAsync(Array.from(selectedStudentIds))
+      setSelectedStudentIds(new Set())
+      toast.success(`${count} student${count !== 1 ? 's' : ''} deleted.`)
+    } catch (err) {
+      toast.error(err.message)
+    }
+  }
+
   const filteredStudents = students?.filter(s =>
     !searchTerm ||
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.roll_number.toLowerCase().includes(searchTerm.toLowerCase())
   ) || []
+
+  // Switch class → clear selection
+  const handleSwitchClass = (classId) => {
+    setActiveClassId(classId)
+    localStorage.setItem('activeClassId', classId)
+    setSelectedStudentIds(new Set())
+    setSearchTerm('')
+  }
 
   if (classesLoading) return <LoadingSpinner />
 
@@ -136,7 +181,20 @@ export default function ClassesPage() {
             class sections.
           </p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+      <div className="flex items-center gap-3 w-full sm:w-auto">
+          {selectedStudentIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={bulkDelete.isPending}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-red-500 hover:bg-red-600 text-white transition-colors disabled:opacity-60"
+            >
+              {bulkDelete.isPending
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <Trash2 className="w-4 h-4" />
+              }
+              Delete Selected ({selectedStudentIds.size})
+            </button>
+          )}
           <Button
             onClick={() => setImportModalOpen(true)}
             variant="outline"
@@ -165,7 +223,7 @@ export default function ClassesPage() {
           return (
             <div
               key={c.id}
-              onClick={() => setActiveClassId(c.id)}
+              onClick={() => handleSwitchClass(c.id)}
               className={clsx(
                 'group flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all border cursor-pointer select-none',
                 isActive
@@ -208,13 +266,13 @@ export default function ClassesPage() {
                   value={newClassName}
                   onChange={(e) => { setNewClassName(e.target.value); setShowSuggestions(true) }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') handleSave()
+                    if (e.key === 'Enter') handleCreateClass()
                     if (e.key === 'Escape') { setIsAddingClass(false); setNewClassName(''); setShowSuggestions(false) }
                   }}
                   className="border border-slate-200 rounded-l-lg px-3 py-2 text-sm w-44 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                 />
                 <button
-                  onClick={() => handleSave()}
+                  onClick={() => handleCreateClass()}
                   disabled={createClass.isPending}
                   className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 text-sm font-medium transition-colors disabled:opacity-60 h-[38px] flex items-center gap-1"
                 >
@@ -271,6 +329,9 @@ export default function ClassesPage() {
             <p className="text-xs text-slate-500 mt-0.5">
               Total Enrolled Students:{' '}
               <span className="font-semibold text-indigo-600">{students?.length || 0}</span>
+              {selectedStudentIds.size > 0 && (
+                <span className="ml-2 text-indigo-500">({selectedStudentIds.size} selected)</span>
+              )}
             </p>
           </div>
           <div className="relative w-full sm:w-72">
@@ -305,6 +366,9 @@ export default function ClassesPage() {
             <StudentList
               students={filteredStudents}
               classId={currentClassId}
+              selectedIds={selectedStudentIds}
+              onSelectChange={handleToggleStudent}
+              onSelectAll={handleSelectAll}
             />
           </div>
         )}

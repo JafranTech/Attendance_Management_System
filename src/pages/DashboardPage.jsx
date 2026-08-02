@@ -1,9 +1,9 @@
-import { useState } from 'react'
 import { format } from 'date-fns'
-import { BookOpen, Users, AlertTriangle, TrendingUp, ChevronDown } from 'lucide-react'
+import { ClipboardCheck, BookOpen, AlertTriangle, ChevronRight, TrendingUp, ChevronDown, Users } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
-import { useDashboardStats, useAttendanceTrend, useLowAttendanceStudents, useTodaySchedule } from '../hooks/useDashboard'
+import { useDashboardStats, useLowAttendanceStudents, useTodaySchedule, useAttendanceTrend } from '../hooks/useDashboard'
 import { useCourses } from '../hooks/useCourses'
 import { StatsCard } from '../components/dashboard/StatsCard'
 import { AttendanceBarChart } from '../components/dashboard/AttendanceBarChart'
@@ -16,9 +16,9 @@ export default function DashboardPage() {
   const [selectedCourseId, setSelectedCourseId] = useState(null)
 
   const { data: stats, isLoading: statsLoading } = useDashboardStats()
-  const { data: trend, isLoading: trendLoading } = useAttendanceTrend(selectedCourseId)
   const { data: lowStudents, isLoading: lowLoading } = useLowAttendanceStudents()
   const { data: todaySchedule, isLoading: scheduleLoading } = useTodaySchedule()
+  const { data: trend, isLoading: trendLoading } = useAttendanceTrend(selectedCourseId)
   const { data: courses } = useCourses()
 
   const facultyName = user?.email?.split('@')[0] ?? 'Faculty'
@@ -29,30 +29,24 @@ export default function DashboardPage() {
     : null
 
   return (
-    <div>
+    <div className="space-y-5">
       {/* Welcome Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">
+      <div>
+        <h1 className="text-xl font-bold text-slate-900">
           Good {getGreeting()}, {facultyName}! 👋
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">{today}</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+      {/* Quick Stats Row */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
         <StatsCard
           icon={BookOpen}
           label="Total Courses"
           value={statsLoading ? '…' : stats?.totalCourses}
           subtext="This semester"
           color="blue"
-        />
-        <StatsCard
-          icon={Users}
-          label="Total Students"
-          value={statsLoading ? '…' : stats?.totalStudents}
-          subtext="Across all courses"
-          color="purple"
+          onClick={() => navigate('/courses')}
         />
         <StatsCard
           icon={AlertTriangle}
@@ -102,10 +96,23 @@ export default function DashboardPage() {
           {trendLoading ? <LoadingSpinner /> : <AttendanceBarChart data={trend} />}
         </div>
 
-        {/* Quick Actions / Today's Classes */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-5">
-          <h2 className="text-base font-semibold text-slate-900 mb-3">Today's Classes</h2>
-          {scheduleLoading ? <LoadingSpinner size="sm" /> : <QuickActions schedule={todaySchedule} />}
+        {/* Today's Classes */}
+        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm flex flex-col">
+          <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-slate-50">
+            <div className="flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-blue-600" />
+              <h2 className="text-base font-bold text-slate-900">Today's Classes</h2>
+            </div>
+            <button
+              onClick={() => navigate('/attendance')}
+              className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Attend <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+          <div className="p-4 flex-1">
+            {scheduleLoading ? <LoadingSpinner size="sm" /> : <QuickActions schedule={todaySchedule} />}
+          </div>
         </div>
       </div>
     </div>

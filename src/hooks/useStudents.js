@@ -12,6 +12,7 @@ import {
   enrollDefaultStudents,
   enrollSelectedStudents,
   updateStudentBatches,
+  bulkDeleteStudents,
 } from '../services/studentsService'
 
 export function useStudents(courseId) {
@@ -133,6 +134,17 @@ export function useUpdateStudentBatches(courseId) {
     mutationFn: ({ studentIds, batch }) => updateStudentBatches(studentIds, batch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', courseId] })
+    },
+  })
+}
+
+export function useBulkDeleteStudents(classId) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (studentIds) => bulkDeleteStudents(studentIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students', 'class', classId] })
+      queryClient.invalidateQueries({ queryKey: ['classes'] })
     },
   })
 }

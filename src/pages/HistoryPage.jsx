@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react'
 import { format, parseISO } from 'date-fns'
-import { History, ChevronLeft, Pencil, CheckCircle2, XCircle, Search } from 'lucide-react'
+import { History, ChevronLeft, Pencil, CheckCircle2, XCircle, Trash2 } from 'lucide-react'
 import { useCourses } from '../hooks/useCourses'
-import { useAttendanceHistory, useAllHistory, useSessionDetails } from '../hooks/useAttendance'
+import { useAttendanceHistory, useAllHistory, useSessionDetails, useDeleteSession } from '../hooks/useAttendance'
+import toast from 'react-hot-toast'
 import { SessionCard } from '../components/attendance/SessionCard'
 import { EditAttendanceModal } from '../components/attendance/EditAttendanceModal'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
@@ -13,12 +14,14 @@ import clsx from 'clsx'
 export default function HistoryPage() {
   const [selectedCourse, setSelectedCourse] = useState('all')
   const [searchDate, setSearchDate] = useState('')
+  const [searchEndDate, setSearchEndDate] = useState('')
   const [selectedSession, setSelectedSession] = useState(null)
   const [editRow, setEditRow] = useState(null)
 
   const { data: courses } = useCourses()
   const { data: allHistory, isLoading } = useAllHistory()
   const { data: sessionDetails, isLoading: detailsLoading } = useSessionDetails(selectedSession?.id)
+  const deleteSession = useDeleteSession()
 
   const filteredHistory = useMemo(() => {
     if (!allHistory) return []
@@ -28,11 +31,26 @@ export default function HistoryPage() {
       result = result.filter(s => s.course_id === selectedCourse)
     }
     if (searchDate) {
-      result = result.filter(s => s.date === searchDate)
+      result = result.filter(s => s.date >= searchDate)
+    }
+    if (searchEndDate) {
+      result = result.filter(s => s.date <= searchEndDate)
     }
     
     return result
-  }, [allHistory, selectedCourse, searchDate])
+  }, [allHistory, selectedCourse, searchDate, searchEndDate])
+
+  const handleDeleteSession = async () => {
+    if (window.confirm('Are you sure you want to delete this entire attendance session? This action cannot be undone.')) {
+      try {
+        await deleteSession.mutateAsync(selectedSession.id)
+        toast.success('Session deleted successfully')
+        setSelectedSession(null)
+      } catch (err) {
+        toast.error(err.message)
+      }
+    }
+  }
 
   if (selectedSession) {
     const details = sessionDetails || []
@@ -41,14 +59,24 @@ export default function HistoryPage() {
 
     return (
       <div className="max-w-3xl mx-auto">
-        {/* Header */}
-        <button
-          onClick={() => setSelectedSession(null)}
-          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          Back to History
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => setSelectedSession(null)}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            Back to History
+          </button>
+          
+          <button
+            onClick={handleDeleteSession}
+            disabled={deleteSession.isPending}
+            className="flex items-center gap-2 text-sm text-red-600 bg-red-50 hover:bg-red-100 hover:text-red-700 px-3 py-1.5 rounded-lg transition-colors font-semibold disabled:opacity-50"
+          >
+            <Trash2 className="w-4 h-4" />
+            {deleteSession.isPending ? 'Deleting...' : 'Delete Session'}
+          </button>
+        </div>
 
         <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 mb-6">
           <div className="flex justify-between items-start">
@@ -147,17 +175,31 @@ export default function HistoryPage() {
         </div>
         
         {/* Date Search */}
-        <div className="relative">
-          <input
-            type="date"
-            value={searchDate}
-            onChange={(e) => setSearchDate(e.target.value)}
-            className="pl-3 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm w-full sm:w-48 text-slate-600"
-          />
-          {searchDate && (
+        <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3 bg-white p-2 border border-slate-200 rounded-xl shadow-sm">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider w-10 sm:w-auto text-right">From</span>
+            <input
+              type="date"
+              value={searchDate}
+              onChange={(e) => setSearchDate(e.target.value)}
+              className="flex-1 sm:w-36 px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700"
+            />
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider w-10 sm:w-auto text-right">To</span>
+            <input
+              type="date"
+              value={searchEndDate}
+              min={searchDate}
+              onChange={(e) => setSearchEndDate(e.target.value)}
+              className="flex-1 sm:w-36 px-2 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700"
+            />
+          </div>
+          
+          {(searchDate || searchEndDate) && (
             <button 
-              onClick={() => setSearchDate('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 font-semibold"
+              onClick={() => { setSearchDate(''); setSearchEndDate('') }}
+              className="text-xs text-slate-400 hover:text-slate-600 font-semibold px-2 w-full sm:w-auto text-center mt-1 sm:mt-0"
             >
               Clear
             </button>
@@ -202,7 +244,7 @@ export default function HistoryPage() {
         <EmptyState
           icon={History}
           title="No attendance records found"
-          description={searchDate ? `No records found for ${format(parseISO(searchDate), 'dd MMM yyyy')}` : "Mark attendance for a course to see it here."}
+          description={(searchDate || searchEndDate) ? "No records found for the selected date range." : "Mark attendance for a course to see it here."}
         />
       )}
 

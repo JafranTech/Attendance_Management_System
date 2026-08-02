@@ -6,7 +6,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { format, isSunday, isAfter, startOfDay, parseISO, getDay } from 'date-fns'
 import {
   ClipboardCheck, ChevronRight, Loader2, Users, CheckCircle2,
-  List, MousePointerClick, Zap, Calendar, CheckSquare,
+  List, MousePointerClick, Zap, Calendar, CheckSquare, Pencil,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
@@ -41,6 +41,7 @@ export default function AttendancePage() {
   const [selection, setSelection] = useState(null)
   const [statuses, setStatuses] = useState({})
 
+  const [batchFilter, setBatchFilter] = useState('All') // 'All', 'Batch 1', 'Batch 2'
   // viewMode: 'list' | 'quick' | 'interactive'
   const [viewMode, setViewMode] = useState(() => localStorage.getItem('attendanceViewMode') || 'list')
   const [isUnfilledPopupOpen, setIsUnfilledPopupOpen] = useState(false)
@@ -61,16 +62,36 @@ export default function AttendancePage() {
 
   const { data: timetable } = useTimetable(watchCourseId)
 
-  // Compute available hours for the selected date
-  const availableHours = useMemo(() => {
+  // Compute available BLOCKS for the selected date (groups contiguous hours)
+  const availableBlocks = useMemo(() => {
     if (!timetable || !watchDate) return []
     const parsedDate = parseISO(watchDate)
-    const dayOfWeek = getDay(parsedDate) // 0 (Sunday) to 6 (Saturday)
-    return timetable
+    const dayOfWeek = getDay(parsedDate)
+    const dayHours = timetable
       .filter(t => t.day_of_week === dayOfWeek)
       .map(t => t.hour)
       .sort((a, b) => a - b)
+
+    // Group contiguous hours into blocks
+    const blocks = []
+    let block = null
+    dayHours.forEach(h => {
+      if (!block) {
+        block = { start: h, end: h, hours: [h] }
+      } else if (h === block.end + 1) {
+        block.end = h
+        block.hours.push(h)
+      } else {
+        blocks.push(block)
+        block = { start: h, end: h, hours: [h] }
+      }
+    })
+    if (block) blocks.push(block)
+    return blocks // [{ start, end, hours }]
   }, [timetable, watchDate])
+
+  // For backwards compat: flat list of starting hours per block
+  const availableHours = availableBlocks.map(b => b.start)
 
   // Automatically select the first available hour if none is selected
   useEffect(() => {
@@ -110,13 +131,23 @@ export default function AttendancePage() {
   const onSelectionSubmit = (data) => {
     const dateError = validateDate(data.date)
     if (dateError) { toast.error(dateError); return }
-    if (existingRecord) { toast.error('Attendance for this hour is already marked.'); return }
-    if (availableHours.length === 0) { toast.error('No classes scheduled for this day.'); return }
+    if (existingRecord?.is_holiday) { toast.error('This hour is already marked as a holiday.'); return }
+    if (availableBlocks.length === 0) { toast.error('No classes scheduled for this day.'); return }
 
     const course = courses?.find((c) => c.id === data.courseId)
-    setSelection({ ...data, courseName: course?.course_name, hour: Number(data.hour) })
+    // Find the block for the selected starting hour
+    const block = availableBlocks.find(b => b.start === Number(data.hour)) || { start: Number(data.hour), end: Number(data.hour), hours: [Number(data.hour)] }
+    setSelection({ ...data, courseName: course?.course_name, hour: Number(data.hour), block })
+    
+    // If the session already exists, preload the existing statuses
+    const initialStatuses = {}
+    if (existingRecord?.attendance_details) {
+      existingRecord.attendance_details.forEach(d => {
+        initialStatuses[d.student_id] = d.status
+      })
+    }
+    setStatuses(initialStatuses)
     setStep('mark')
-    setStatuses({})
   }
 
   const handleToggle = (studentId) => {
@@ -126,18 +157,34 @@ export default function AttendancePage() {
     }))
   }
 
-  // Mark ALL students as Present
+  // Mark visible (current batch) students as Present
   const handlePresentAll = () => {
-    if (!students) return
-    const allPresent = {}
-    students.forEach((s) => { allPresent[s.id] = 'Present' })
-    setStatuses(allPresent)
-    toast.success('All students marked Present!', { icon: '✅' })
+    if (!visibleStudents || visibleStudents.length === 0) return
+    const allPresent = visibleStudents.every(s => statuses[s.id] === 'Present')
+    
+    setStatuses(prev => {
+      const next = { ...prev }
+      visibleStudents.forEach((s) => {
+        if (allPresent) {
+          delete next[s.id] // Clear them if all are present
+        } else {
+          next[s.id] = 'Present'
+        }
+      })
+      return next
+    })
+    
+    if (allPresent) {
+      toast.success('Cleared statuses for current students.', { icon: '🧹' })
+    } else {
+      toast.success('All current students marked Present!', { icon: '✅' })
+    }
   }
 
   const handleSaveClick = () => {
     if (!students || students.length === 0) return
-    const unfilled = students.filter(s => !statuses[s.id])
+    // Only check unfilled for the VISIBLE students (current batch)
+    const unfilled = visibleStudents.filter(s => !statuses[s.id])
 
     if (unfilled.length > 0) {
       setIsUnfilledPopupOpen(true)
@@ -148,18 +195,29 @@ export default function AttendancePage() {
   }
 
   const handleConfirmSave = async () => {
-    const studentStatuses = students.map((s) => ({
-      studentId: s.id,
-      status: statuses[s.id],
-    }))
+    // Only save statuses for students in the CURRENT batch view.
+    // Students NOT in this batch get NO record (nil) — not absent.
+    const studentStatuses = visibleStudents
+      .filter(s => statuses[s.id]) // only those actually marked
+      .map((s) => ({
+        studentId: s.id,
+        status: statuses[s.id],
+      }))
     try {
-      await saveAttendance.mutateAsync({
-        courseId: selection.courseId,
-        date: selection.date,
-        hour: selection.hour,
-        studentStatuses,
-      })
-      toast.success('Attendance saved successfully!')
+      const blockHours = selection.block?.hours || [selection.hour]
+      // Save one attendance record per hour in the block, with the same statuses
+      for (const h of blockHours) {
+        await saveAttendance.mutateAsync({
+          courseId: selection.courseId,
+          date: selection.date,
+          hour: h,
+          studentStatuses,
+        })
+      }
+      const label = blockHours.length > 1
+        ? `Attendance saved for Hours ${blockHours[0]}–${blockHours[blockHours.length - 1]}!`
+        : 'Attendance saved successfully!'
+      toast.success(label)
       navigate('/history')
     } catch (err) {
       toast.error(err.message)
@@ -184,9 +242,25 @@ export default function AttendancePage() {
     }
   }
 
-  const presentCount = Object.values(statuses).filter((s) => s === 'Present').length
-  const absentCount = Object.values(statuses).filter((s) => s === 'Absent').length
-  const unfilledCount = students ? students.length - (presentCount + absentCount) : 0
+  // Batch computations (needed for both stats and step 2 UI)
+  const batch1Students = students?.filter(s => s.batch === 'Batch 1') || []
+  const batch2Students = students?.filter(s => s.batch === 'Batch 2') || []
+  const hasBatches = batch1Students.length > 0 || batch2Students.length > 0
+  const batch1Range = batch1Students.length > 0
+    ? `${batch1Students[0]?.roll_number} \u2013 ${batch1Students[batch1Students.length - 1]?.roll_number}`
+    : null
+  const batch2Range = batch2Students.length > 0
+    ? `${batch2Students[0]?.roll_number} \u2013 ${batch2Students[batch2Students.length - 1]?.roll_number}`
+    : null
+  const visibleStudents = !students ? [] :
+    batchFilter === 'Batch 1' ? batch1Students :
+    batchFilter === 'Batch 2' ? batch2Students :
+    students
+
+  // Stats count only the visible (filtered) students
+  const presentCount = visibleStudents.filter(s => statuses[s.id] === 'Present').length
+  const absentCount = visibleStudents.filter(s => statuses[s.id] === 'Absent').length
+  const unfilledCount = visibleStudents.filter(s => !statuses[s.id]).length
 
   // ── STEP 1: SELECT COURSE ───────────────────────────────────────────────
   if (step === 'select') {
@@ -243,7 +317,14 @@ export default function AttendancePage() {
                   className="block w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
                 >
                   {!watchCourseId && <option value="">Select a course first</option>}
-                  {availableHours.map((h) => <option key={h} value={h}>Hour {h}</option>)}
+                  {availableBlocks.map((b) => (
+                    <option key={b.start} value={b.start}>
+                      {b.hours.length > 1
+                        ? `Hours ${b.start}–${b.end} (Lab Block, ${b.hours.length} hrs)`
+                        : `Hour ${b.start}`
+                      }
+                    </option>
+                  ))}
                 </select>
               )}
               {errors.hour && <p className="text-xs text-red-500">{errors.hour.message}</p>}
@@ -267,72 +348,129 @@ export default function AttendancePage() {
   }
 
   // ── STEP 2: MARK ATTENDANCE ──────────────────────────────────────────────
+  const isLabBlock = selection?.block && selection.block.hours.length > 1
   return (
     <div className="max-w-2xl">
       {/* Header */}
       <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{selection.courseName}</h1>
-          <p className="text-sm text-slate-500">
-            {format(parseISO(selection.date), 'EEEE, dd MMM yyyy')} · Hour {selection.hour}
+          <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
+            {format(parseISO(selection.date), 'EEEE, dd MMM yyyy')}
+            <span className="text-slate-300">·</span>
+            {isLabBlock ? (
+              <span className="flex items-center gap-1 text-purple-600 font-medium">
+                <Pencil className="w-3 h-3" />
+                Hours {selection.block.start}–{selection.block.end} ({selection.block.hours.length}-Hr Lab Session)
+              </span>
+            ) : (
+              `Hour ${selection.hour}`
+            )}
           </p>
         </div>
         <button
           onClick={() => setStep('select')}
-          className="text-xs text-slate-400 hover:text-slate-600 underline mt-1"
+          className="text-xs text-blue-500 hover:text-blue-700 font-medium mt-1"
         >
           Change
         </button>
       </div>
 
       {/* Stats Bar */}
-      <div className="flex gap-2 sm:gap-3 mb-6">
-        <div className="flex-1 bg-green-50 border border-green-100 rounded-xl px-2 sm:px-4 py-2.5 text-center">
-          <p className="text-base sm:text-lg font-bold text-green-700">{presentCount}</p>
-          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-green-600">Present</p>
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-5">
+        <div className="bg-white border border-slate-100 rounded-xl px-2 sm:px-4 py-3 text-center shadow-sm">
+          <p className="text-xl sm:text-2xl font-bold text-green-500">{presentCount}</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-500 mt-0.5">Present</p>
         </div>
-        <div className="flex-1 bg-red-50 border border-red-100 rounded-xl px-2 sm:px-4 py-2.5 text-center">
-          <p className="text-base sm:text-lg font-bold text-red-600">{absentCount}</p>
-          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-red-500">Absent</p>
+        <div className="bg-white border border-slate-100 rounded-xl px-2 sm:px-4 py-3 text-center shadow-sm">
+          <p className="text-xl sm:text-2xl font-bold text-red-500">{absentCount}</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-500 mt-0.5">Absent</p>
         </div>
-        <div className="flex-1 bg-amber-50 border border-amber-100 rounded-xl px-2 sm:px-4 py-2.5 text-center">
-          <p className="text-base sm:text-lg font-bold text-amber-700">{unfilledCount}</p>
-          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-amber-600">Unmarked</p>
+        <div className="bg-white border border-slate-100 rounded-xl px-2 sm:px-4 py-3 text-center shadow-sm">
+          <p className="text-xl sm:text-2xl font-bold text-amber-500">{unfilledCount}</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-500 mt-0.5">Unmarked</p>
         </div>
-        <div className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-2 sm:px-4 py-2.5 text-center">
-          <p className="text-base sm:text-lg font-bold text-slate-700">{students?.length ?? 0}</p>
-          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-500">Total</p>
+        <div className="bg-white border border-slate-100 rounded-xl px-2 sm:px-4 py-3 text-center shadow-sm">
+          <p className="text-xl sm:text-2xl font-bold text-slate-800">{students?.length ?? 0}</p>
+          <p className="text-[10px] sm:text-xs uppercase tracking-wider font-semibold text-slate-500 mt-0.5">Total</p>
         </div>
       </div>
 
+      {/* LAB BATCH Filter — only shown when lab block AND batches exist */}
+      {isLabBlock && hasBatches && (
+        <div className="mb-5">
+          <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+            <Pencil className="w-3 h-3" /> Lab Batch
+          </p>
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              onClick={() => setBatchFilter('Batch 1')}
+              className={clsx(
+                'flex flex-col items-center py-3 px-2 rounded-xl border-2 text-sm font-semibold transition-all',
+                batchFilter === 'Batch 1'
+                  ? 'bg-purple-600 border-purple-600 text-white'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-purple-300'
+              )}
+            >
+              <span>Batch 1</span>
+              {batch1Range && <span className={clsx('text-[10px] font-normal mt-0.5', batchFilter === 'Batch 1' ? 'text-purple-200' : 'text-slate-400')}>{batch1Range}</span>}
+            </button>
+            <button
+              onClick={() => setBatchFilter('Batch 2')}
+              className={clsx(
+                'flex flex-col items-center py-3 px-2 rounded-xl border-2 text-sm font-semibold transition-all',
+                batchFilter === 'Batch 2'
+                  ? 'bg-purple-600 border-purple-600 text-white'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-purple-300'
+              )}
+            >
+              <span>Batch 2</span>
+              {batch2Range && <span className={clsx('text-[10px] font-normal mt-0.5', batchFilter === 'Batch 2' ? 'text-purple-200' : 'text-slate-400')}>{batch2Range}</span>}
+            </button>
+            <button
+              onClick={() => setBatchFilter('All')}
+              className={clsx(
+                'flex flex-col items-center py-3 px-2 rounded-xl border-2 text-sm font-semibold transition-all',
+                batchFilter === 'All'
+                  ? 'bg-purple-600 border-purple-600 text-white'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-purple-300'
+              )}
+            >
+              <span>All</span>
+              <span className={clsx('text-[10px] font-normal mt-0.5', batchFilter === 'All' ? 'text-purple-200' : 'text-slate-400')}>{students?.length} students</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* View Mode Tabs */}
-      <div className="flex bg-slate-100 p-1 rounded-xl mb-6">
+      <div className="flex bg-white border border-slate-200 p-1 rounded-xl mb-5 shadow-sm">
         <button
           onClick={() => setViewMode('list')}
           className={clsx(
             'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all',
-            viewMode === 'list' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            viewMode === 'list' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           )}
         >
-          <List className="w-4 h-4" /> <span className="hidden sm:inline">List View</span>
+          <List className="w-4 h-4" /> <span>List View</span>
         </button>
         <button
           onClick={() => setViewMode('quick')}
           className={clsx(
             'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all',
-            viewMode === 'quick' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            viewMode === 'quick' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           )}
         >
-          <Zap className="w-4 h-4" /> <span className="hidden sm:inline">Quick Entry</span>
+          <Zap className="w-4 h-4" /> <span>Quick Entry</span>
         </button>
         <button
           onClick={() => setViewMode('interactive')}
           className={clsx(
             'flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-all',
-            viewMode === 'interactive' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'
+            viewMode === 'interactive' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           )}
         >
-          <MousePointerClick className="w-4 h-4" /> <span className="hidden sm:inline">One-by-One</span>
+          <MousePointerClick className="w-4 h-4" /> <span className="hidden sm:inline">One-by-One</span><span className="sm:hidden">1x1</span>
         </button>
       </div>
 
@@ -349,26 +487,18 @@ export default function AttendancePage() {
       {!studentsLoading && students && students.length > 0 && (
         <div className="pb-32">
           {viewMode === 'quick' && (
-            <QuickEntryMode students={students} statuses={statuses} setStatuses={setStatuses} />
+            <QuickEntryMode students={visibleStudents} statuses={statuses} setStatuses={setStatuses} />
           )}
 
           {viewMode === 'interactive' && (
-            <InteractiveMode students={students} statuses={statuses} setStatuses={setStatuses} />
+            <InteractiveMode students={visibleStudents} statuses={statuses} setStatuses={setStatuses} />
           )}
 
           {viewMode === 'list' && (
             <>
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-xs text-slate-400">Tap a student to toggle Present ↔ Absent</p>
-                {/* % legend */}
-                {attendancePercentages && Object.keys(attendancePercentages).length > 0 && (
-                  <p className="text-[10px] text-slate-400 hidden sm:block">
-                    Coloured badges show current attendance %
-                  </p>
-                )}
-              </div>
+              <p className="text-xs text-slate-400 mb-3">Tap a student to toggle Present ↔ Absent</p>
               <div className="space-y-2">
-                {students.map((student) => (
+                {visibleStudents.map((student) => (
                   <StudentAttendanceRow
                     key={student.id}
                     student={student}
@@ -406,8 +536,12 @@ export default function AttendancePage() {
               disabled={saveAttendance.isPending}
             >
               <CheckSquare className="w-4 h-4 mr-1.5" />
-              <span className="text-sm font-semibold hidden sm:inline">Present All</span>
-              <span className="text-sm font-semibold sm:hidden">All</span>
+              <span className="text-sm font-semibold hidden sm:inline">
+                {visibleStudents.length > 0 && visibleStudents.every(s => statuses[s.id] === 'Present') ? 'Clear All' : 'Present All'}
+              </span>
+              <span className="text-sm font-semibold sm:hidden">
+                {visibleStudents.length > 0 && visibleStudents.every(s => statuses[s.id] === 'Present') ? 'Clear' : 'All'}
+              </span>
             </Button>
 
             {/* Save Button */}
@@ -424,7 +558,7 @@ export default function AttendancePage() {
               ) : unfilledCount > 0 ? (
                 <>Save ({unfilledCount} unmarked)</>
               ) : (
-                <><CheckCircle2 className="w-4 h-4 mr-1.5 sm:mr-2" />Save ({students.length})</>
+                <><CheckCircle2 className="w-4 h-4 mr-1.5 sm:mr-2" />Save ({visibleStudents.length})</>
               )}
             </Button>
           </div>

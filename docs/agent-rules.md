@@ -24,6 +24,7 @@ This file defines non-negotiable operating rules for the AI development agent bu
 | No magic numbers | Extract repeated values into named constants (e.g., `MIN_ATTENDANCE_PERCENT = 75`). |
 | Max component length: 150 lines | If a component exceeds 150 lines, split it into smaller sub-components. |
 | Friendly error messages | Never expose raw Supabase error messages. Show user-friendly text with `toast.error()`. |
+| Immediate Documentation | Whenever a new feature, table, or architectural change is implemented, immediately update the `docs/` folder. |
 
 ---
 

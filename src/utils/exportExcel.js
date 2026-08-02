@@ -24,19 +24,29 @@ export function exportAttendanceToExcel({ course, sessions, facultyName, startDa
 
   // Build session column headers
   const sessionHeaders = sessions.map(
-    (s) => `${format(parseISO(s.date), 'dd/MM')}\nHr ${s.hour}`
+    (s) => s.is_holiday
+      ? `${format(parseISO(s.date), 'dd/MM')}\n(Hol)`
+      : `${format(parseISO(s.date), 'dd/MM')}\nHr ${s.hour}`
   )
 
   // Build data rows
   const rows = students.map((student) => {
     let presentCount = 0
+    let totalSessions = 0
     const sessionStatuses = sessions.map((session) => {
+      if (session.is_holiday) {
+        const reason = session.holiday_reason || 'HOLIDAY'
+        return reason.split('').join('\n')
+      }
       const detail = session.attendance_details.find((d) => d.students.id === student.id)
-      const status = detail?.status || 'Absent'
-      if (status === 'Present') presentCount++
-      return status === 'Present' ? 'P' : 'A'
+      if (detail) {
+        totalSessions++
+        const status = detail.status || 'Absent'
+        if (status === 'Present') presentCount++
+        return status === 'Present' ? 'P' : 'A'
+      }
+      return '-'
     })
-    const totalSessions = sessions.length
     const percentage = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
 
     return [

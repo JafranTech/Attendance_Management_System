@@ -1,19 +1,20 @@
 import { supabase } from '../lib/supabase'
 
-export async function fetchHolidays() {
+export async function fetchHolidays(facultyId) {
   const { data, error } = await supabase
     .from('holidays')
     .select('*')
+    .eq('faculty_id', facultyId)
     .order('date', { ascending: true })
 
   if (error) throw new Error('Unable to load holidays. Please try again.')
   return data
 }
 
-export async function addHoliday({ date, description }) {
+export async function addHoliday({ date, description, facultyId }) {
   const { data, error } = await supabase
     .from('holidays')
-    .insert({ date, description })
+    .insert({ date, description, faculty_id: facultyId })
     .select()
     .single()
 

@@ -48,7 +48,7 @@ export function generateAttendancePdf({ course, sessions, facultyName, startDate
   )
 
   const sessionCols = sessions.map((s) => ({
-    header: `${format(parseISO(s.date), 'dd/MM')}\nHr${s.hour}`,
+    header: s.is_holiday ? `${format(parseISO(s.date), 'dd/MM')}\n(Hol)` : `${format(parseISO(s.date), 'dd/MM')}\nHr${s.hour}`,
     dataKey: s.id,
   }))
 
@@ -65,23 +65,33 @@ export function generateAttendancePdf({ course, sessions, facultyName, startDate
 
   const rows = students.map((student, idx) => {
     let presentCount = 0
+    let totalSessions = 0
     const sessionStatuses = {}
     sessions.forEach((session) => {
-      const detail = session.attendance_details.find((d) => d.students.id === student.id)
-      const status = detail?.status === 'Present' ? 'P' : 'A'
-      if (status === 'P') presentCount++
-      sessionStatuses[session.id] = status
+      if (session.is_holiday) {
+        const reason = session.holiday_reason || 'HOLIDAY'
+        sessionStatuses[session.id] = reason.split('').join('\n')
+      } else {
+        const detail = session.attendance_details.find((d) => d.students.id === student.id)
+        if (detail) {
+          totalSessions++
+          const status = detail.status === 'Present' ? 'P' : 'A'
+          if (status === 'P') presentCount++
+          sessionStatuses[session.id] = status
+        } else {
+          sessionStatuses[session.id] = '-'
+        }
+      }
     })
-    const total = sessions.length
-    const pct = total > 0 ? Math.round((presentCount / total) * 100) : 0
+    const pct = totalSessions > 0 ? Math.round((presentCount / totalSessions) * 100) : 0
     return {
       idx: idx + 1,
       roll: student.roll_number,
       name: student.name,
       ...sessionStatuses,
       present: presentCount,
-      absent: total - presentCount,
-      total,
+      absent: totalSessions - presentCount,
+      total: totalSessions,
       pct: `${pct}%`,
     }
   })
@@ -108,15 +118,25 @@ export function generateAttendancePdf({ course, sessions, facultyName, startDate
       pct: { cellWidth: 14, fontStyle: 'bold' },
     },
     didParseCell: (data) => {
-      // Colour P/A cells
+      // Colour P/A cells, or holiday text
       const isSessionCol = sessions.some((s) => s.id === data.column.dataKey)
       if (isSessionCol && data.section === 'body') {
-        if (data.cell.raw === 'P') {
-          data.cell.styles.fillColor = [220, 252, 231]
-          data.cell.styles.textColor = [22, 163, 74]
-        } else if (data.cell.raw === 'A') {
-          data.cell.styles.fillColor = [254, 226, 226]
-          data.cell.styles.textColor = [220, 38, 38]
+        const session = sessions.find((s) => s.id === data.column.dataKey)
+        if (session?.is_holiday) {
+          data.cell.styles.fillColor = [255, 251, 235] // Light yellow/amber
+          data.cell.styles.textColor = [180, 83, 9] // Dark amber
+          data.cell.styles.fontSize = 5 // Smaller font for vertical reason
+          data.cell.styles.fontStyle = 'bold'
+        } else {
+          if (data.cell.raw === 'P') {
+            data.cell.styles.fillColor = [220, 252, 231]
+            data.cell.styles.textColor = [22, 163, 74]
+          } else if (data.cell.raw === 'A') {
+            data.cell.styles.fillColor = [254, 226, 226]
+            data.cell.styles.textColor = [220, 38, 38]
+          } else if (data.cell.raw === '-') {
+            data.cell.styles.textColor = [156, 163, 175] // gray-400
+          }
         }
       }
       // Low attendance rows

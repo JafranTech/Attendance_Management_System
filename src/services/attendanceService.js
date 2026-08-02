@@ -4,7 +4,7 @@ import { format } from 'date-fns'
 export async function checkAttendanceExists(courseId, date, hour) {
   const { data, error } = await supabase
     .from('attendance')
-    .select('id')
+    .select('id, is_holiday, holiday_reason, attendance_details(student_id, status)')
     .eq('course_id', courseId)
     .eq('date', date)
     .eq('hour', hour)
@@ -15,22 +15,45 @@ export async function checkAttendanceExists(courseId, date, hour) {
 }
 
 export async function saveAttendance(courseId, date, hour, studentStatuses, isHoliday = false, holidayReason = null) {
-  // 1. Insert main attendance record
-  const { data: attendanceRecord, error: attError } = await supabase
+  // 1. Get existing or insert main attendance record
+  let attendanceId
+  const { data: existing, error: existError } = await supabase
     .from('attendance')
-    .insert({ course_id: courseId, date, hour, is_holiday: isHoliday, holiday_reason: holidayReason })
-    .select()
-    .single()
+    .select('id')
+    .eq('course_id', courseId)
+    .eq('date', date)
+    .eq('hour', hour)
+    .maybeSingle()
 
-  if (attError) {
-    if (attError.code === '23505') throw new Error('Attendance for this hour is already marked.')
-    throw new Error('Unable to save attendance. Please try again.')
+  if (existing) {
+    attendanceId = existing.id
+    // Update it in case it's being changed to/from a holiday
+    await supabase.from('attendance')
+      .update({ is_holiday: isHoliday, holiday_reason: holidayReason })
+      .eq('id', attendanceId)
+  } else {
+    const { data: newAtt, error: attError } = await supabase
+      .from('attendance')
+      .insert({ course_id: courseId, date, hour, is_holiday: isHoliday, holiday_reason: holidayReason })
+      .select()
+      .single()
+    if (attError) throw new Error('Unable to save attendance. Please try again.')
+    attendanceId = newAtt.id
   }
 
-  // 2. Insert details for each student, only if it's not a holiday
-  if (!isHoliday && studentStatuses && studentStatuses.length > 0) {
+  // 2. Handle details: if holiday, clear all. Otherwise, update for current batch.
+  if (isHoliday) {
+    await supabase.from('attendance_details').delete().eq('attendance_id', attendanceId)
+  } else if (studentStatuses && studentStatuses.length > 0) {
+    // Delete existing details for these specific students to avoid unique constraint errors if any
+    const studentIds = studentStatuses.map(s => s.studentId)
+    await supabase.from('attendance_details')
+      .delete()
+      .eq('attendance_id', attendanceId)
+      .in('student_id', studentIds)
+
     const details = studentStatuses.map((s) => ({
-      attendance_id: attendanceRecord.id,
+      attendance_id: attendanceId,
       student_id: s.studentId,
       status: s.status,
     }))
@@ -42,7 +65,7 @@ export async function saveAttendance(courseId, date, hour, studentStatuses, isHo
     if (detError) throw new Error('Attendance saved but details failed. Please contact support.')
   }
 
-  return attendanceRecord
+  return { id: attendanceId }
 }
 
 export async function fetchAttendanceHistory(courseId) {
@@ -108,6 +131,16 @@ export async function fetchSessionDetails(attendanceId) {
   })
 
   return detailsWithEdits
+}
+
+export async function deleteSession(attendanceId) {
+  // Deleting the main record will cascade to attendance_details due to FK
+  const { error } = await supabase
+    .from('attendance')
+    .delete()
+    .eq('id', attendanceId)
+    
+  if (error) throw new Error('Unable to delete session. Please try again.')
 }
 
 export async function editAttendanceDetail(attendanceId, studentId, oldStatus, newStatus, reason) {
