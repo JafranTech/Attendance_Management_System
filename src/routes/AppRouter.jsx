@@ -11,10 +11,16 @@ import ReportsPage from '../pages/ReportsPage'
 import SettingsPage from '../pages/SettingsPage'
 import LowAttendancePage from '../pages/LowAttendancePage'
 import ClassesPage from '../pages/ClassesPage'
+import HodDashboard from '../pages/hod/HodDashboard'
+import HodClassDetail from '../pages/hod/HodClassDetail'
+import HodCourseDetail from '../pages/hod/HodCourseDetail'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../assets/Logo.jpeg'
 
+// Faculty layout wrapper — blocks HOD from faculty pages
 function ProtectedLayout({ children }) {
+  const { role } = useAuth()
+  if (role === 'hod') return <Navigate to="/hod/dashboard" replace />
   return (
     <ProtectedRoute>
       <DashboardLayout>{children}</DashboardLayout>
@@ -22,8 +28,17 @@ function ProtectedLayout({ children }) {
   )
 }
 
+// HOD layout wrapper — blocks faculty from HOD pages
+function HodProtectedRoute({ children }) {
+  const { user, role, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (role === 'faculty') return <Navigate to="/dashboard" replace />
+  return children
+}
+
 export function AppRouter() {
-  const { loading } = useAuth()
+  const { loading, role } = useAuth()
 
   if (loading) {
     return (
@@ -43,7 +58,18 @@ export function AppRouter() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+      {/* Root redirect — role-aware */}
+      <Route
+        path="/"
+        element={
+          role === 'hod'
+            ? <Navigate to="/hod/dashboard" replace />
+            : <Navigate to="/dashboard" replace />
+        }
+      />
+
+      {/* Faculty routes */}
       <Route path="/dashboard" element={<ProtectedLayout><DashboardPage /></ProtectedLayout>} />
       <Route path="/classes" element={<ProtectedLayout><ClassesPage /></ProtectedLayout>} />
       <Route path="/courses" element={<ProtectedLayout><CoursesPage /></ProtectedLayout>} />
@@ -53,6 +79,11 @@ export function AppRouter() {
       <Route path="/reports" element={<ProtectedLayout><ReportsPage /></ProtectedLayout>} />
       <Route path="/settings" element={<ProtectedLayout><SettingsPage /></ProtectedLayout>} />
       <Route path="/low-attendance" element={<ProtectedLayout><LowAttendancePage /></ProtectedLayout>} />
+
+      {/* HOD routes */}
+      <Route path="/hod/dashboard" element={<HodProtectedRoute><HodDashboard /></HodProtectedRoute>} />
+      <Route path="/hod/class/:classId" element={<HodProtectedRoute><HodClassDetail /></HodProtectedRoute>} />
+      <Route path="/hod/course/:courseId" element={<HodProtectedRoute><HodCourseDetail /></HodProtectedRoute>} />
     </Routes>
   )
 }

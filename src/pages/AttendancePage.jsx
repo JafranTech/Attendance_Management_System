@@ -29,6 +29,7 @@ const selectionSchema = z.object({
   courseId: z.string().min(1, 'Select a course'),
   date: z.string().min(1, 'Select a date'),
   hour: z.string().min(1, 'Select an hour'),
+  alternateDay: z.string().optional(),
 })
 
 const TODAY = format(new Date(), 'yyyy-MM-dd')
@@ -53,12 +54,14 @@ export default function AttendancePage() {
 
   const { register, handleSubmit, watch, formState: { errors }, setValue } = useForm({
     resolver: zodResolver(selectionSchema),
-    defaultValues: { courseId: initialCourseId, date: TODAY, hour: '' },
+    defaultValues: { courseId: initialCourseId, date: TODAY, hour: '', alternateDay: '1' },
   })
 
   const watchCourseId = watch('courseId')
   const watchDate = watch('date')
   const watchHour = watch('hour')
+  const watchAlternateDay = watch('alternateDay') || '1'
+  const isSaturdaySelected = watchDate && getDay(parseISO(watchDate)) === 6
 
   const { data: timetable } = useTimetable(watchCourseId)
 
@@ -66,7 +69,12 @@ export default function AttendancePage() {
   const availableBlocks = useMemo(() => {
     if (!timetable || !watchDate) return []
     const parsedDate = parseISO(watchDate)
-    const dayOfWeek = getDay(parsedDate)
+    let dayOfWeek = getDay(parsedDate)
+
+    if (dayOfWeek === 6) {
+      dayOfWeek = Number(watchAlternateDay)
+    }
+
     const dayHours = timetable
       .filter(t => t.day_of_week === dayOfWeek)
       .map(t => t.hour)
@@ -137,7 +145,7 @@ export default function AttendancePage() {
     const course = courses?.find((c) => c.id === data.courseId)
     // Find the block for the selected starting hour
     const block = availableBlocks.find(b => b.start === Number(data.hour)) || { start: Number(data.hour), end: Number(data.hour), hours: [Number(data.hour)] }
-    setSelection({ ...data, courseName: course?.course_name, hour: Number(data.hour), block })
+    setSelection({ ...data, courseName: course?.course_name, hour: Number(data.hour), block, alternateDay: data.alternateDay })
     
     // If the session already exists, preload the existing statuses
     const initialStatuses = {}
@@ -302,6 +310,24 @@ export default function AttendancePage() {
               {errors.date && <p className="text-xs text-red-500">{errors.date.message}</p>}
             </div>
 
+            {/* Alternate Day (Saturday only) */}
+            {isSaturdaySelected && (
+              <div className="space-y-1.5">
+                <Label htmlFor="alternateDay">Alternate Day Timetable (For Saturday) *</Label>
+                <select
+                  id="alternateDay"
+                  {...register('alternateDay')}
+                  className="block w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 border-amber-200 text-amber-900"
+                >
+                  <option value="1">Monday Timetable</option>
+                  <option value="2">Tuesday Timetable</option>
+                  <option value="3">Wednesday Timetable</option>
+                  <option value="4">Thursday Timetable</option>
+                  <option value="5">Friday Timetable</option>
+                </select>
+              </div>
+            )}
+
             {/* Hour */}
             <div className="space-y-1.5">
               <Label htmlFor="hour">Hour *</Label>
@@ -365,6 +391,12 @@ export default function AttendancePage() {
               </span>
             ) : (
               `Hour ${selection.hour}`
+            )}
+            {getDay(parseISO(selection.date)) === 6 && (
+              <span className="text-amber-600 font-medium ml-1 flex items-center gap-1">
+                <span className="text-slate-300">·</span>
+                {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'][Number(selection.alternateDay) - 1]} Timetable
+              </span>
             )}
           </p>
         </div>

@@ -28,20 +28,20 @@ export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
 
-        // Skip header row, map columns
+        // Skip header row, map columns (Col A: S.No, Col B: Roll Number, Col C: Name)
         const students = rows
           .slice(1)
-          .filter((r) => r[0] || r[1])
+          .filter((r) => r[1] || r[2]) // Check if Roll Number or Name exists
           .map((r) => ({
-            rollNumber: String(r[0]).trim(),
-            name: String(r[1]).trim(),
-            email: r[2] ? String(r[2]).trim() : '',
-            batch: r[3] ? String(r[3]).trim() : '',
+            rollNumber: r[1] ? String(r[1]).trim() : '',
+            name: r[2] ? String(r[2]).trim() : '',
+            email: r[3] ? String(r[3]).trim() : '',
+            batch: r[4] ? String(r[4]).trim() : '',
           }))
           .filter((s) => s.rollNumber && s.name)
 
         if (students.length === 0) {
-          setParseError('No valid student rows found. Make sure columns are: Roll No, Name, Email, Batch.')
+          setParseError('No valid student rows found. Make sure columns are: S.No, Roll No, Name.')
           return
         }
         setPreview(students)
@@ -77,7 +77,7 @@ export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
         {/* Instructions */}
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-3">
           <p className="text-xs text-blue-700 font-medium mb-1">Expected Excel Format:</p>
-          <p className="text-xs text-blue-600">Column A: Roll Number | Column B: Name | Column C: Email (optional) | Column D: Batch (optional)</p>
+          <p className="text-xs text-blue-600">Column A: S.No | Column B: Roll Number | Column C: Name</p>
           <p className="text-xs text-blue-500 mt-1">Row 1 is treated as header and skipped.</p>
         </div>
 

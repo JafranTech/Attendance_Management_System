@@ -4,7 +4,7 @@ import toast from 'react-hot-toast'
 import { useTimetable, useAddTimetableEntry, useDeleteTimetableEntry } from '../../hooks/useTimetable'
 import { LoadingSpinner } from '../ui/LoadingSpinner'
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
 const HOURS = [1, 2, 3, 4, 5, 6, 7, 8]
 const SESSION_TYPES = [
   { label: '1 Hour (Lecture)', hours: 1 },

@@ -1,0 +1,20 @@
+ok for now we hav faculty attendace only i have one idea so lets discuss about that can we build hod login for that he can monitaor all the staff and like which year and for taht year every subject student have how much of attendce and in that subject whi have low attendace like that and fro eg inf hod screen it display it final year to it first year hod select final year mostly it is also mobile responsive but more sepecial in pc screen right so bigger show ing with high fidelity and show all classes like Full stack 
+below that ramya 
+hod click that he can see .
+
+like epdina simple aah idhula facultu attemdace laam check panna vena just monitoring students enough ok 
+
+after login in hod dashboard horizonta; rectangle SHowt 
+IT-FINA YEAR 
+IT-3RD YEAR A-SECTION
+...
+
+...
+
+JUST LIKE THIS HOD SELECT THAT AFTER THAT FRO NOW FINAL YEAR HAVE HOW MANY SUBJECT SAME STYLE SHOW THAT LIST I HOD SLECT THAT HE CAN SEE TODAY ATTENDACE HOW MANY PRESENT AND ABSENT LIKE IN THERE ALL , PRESENT,ABSENT WHO IS ABSENST AND 
+
+AND HOD CAN SEE THE STUDENTS ATTENDENCE PERCENTAGE IN AT THE START HE ENTER THOSE SUBJECT HE CAN SEE WHO HAVE LESS ATTENDACE LIKE THAT.
+
+ok for now we hav faculty attendace only i have one idea so lets discuss about that can we build hod login for that he can monitaor all the staff and like which year and for taht year every subject student have how much of attendce and in that subject whi have low attendace like that and fro eg inf hod screen it display it final year to it first year hod select final year mostly it is also mobile responsive but more sepecial in pc screen right so bigger show ing with high fidelity and show all classes like Full stack below that ramya hod click that he can see today absentees liek that liek extra features u add and make a professional and strict all ways monitoring system
+
+LETS DISCUSS and one more thing we assume for now thsi is version 1 now we going to od s version 2 ok for that make chnage for that the docs update these feature when after we discuss and fixed everything

@@ -26,7 +26,7 @@ export function StudentAttendanceRow({ student, status, onToggle, attendancePerc
       onClick={() => onToggle(student.id)}
       role="button"
     >
-      {/* Left: Avatar + Name */}
+      {/* Left: Avatar + Name + Percentage */}
       <div className="flex items-center gap-3">
         <div className={clsx(
           'w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0',
@@ -37,24 +37,26 @@ export function StudentAttendanceRow({ student, status, onToggle, attendancePerc
           {student.name.charAt(0).toUpperCase()}
         </div>
         <div>
-          <p className={clsx('text-sm font-semibold',
-            isPresent ? 'text-green-800' :
-            isAbsent  ? 'text-red-700' :
-            'text-slate-800'
-          )}>
-            {student.name}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className={clsx('text-sm font-semibold',
+              isPresent ? 'text-green-800' :
+              isAbsent  ? 'text-red-700' :
+              'text-slate-800'
+            )}>
+              {student.name}
+            </p>
+            {attendancePercent !== undefined && (
+              <span className={clsx('text-[10px] font-bold px-1.5 py-0.5 rounded-md', percentColor)}>
+                {attendancePercent}%
+              </span>
+            )}
+          </div>
           <p className="text-xs text-slate-400 mt-0.5">{student.roll_number}</p>
         </div>
       </div>
 
-      {/* Right: % badge + Mark toggle */}
+      {/* Right: Mark toggle */}
       <div className="flex items-center gap-3">
-        {attendancePercent !== undefined && (
-          <span className={clsx('text-xs font-bold px-2 py-0.5 rounded-full hidden sm:inline-block', percentColor)}>
-            {attendancePercent}%
-          </span>
-        )}
         <div className="flex items-center gap-1.5">
           <span className={clsx('text-xs font-semibold',
             isPresent ? 'text-green-600' :

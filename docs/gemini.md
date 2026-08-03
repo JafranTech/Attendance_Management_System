@@ -48,9 +48,17 @@ When this file is loaded, immediately understand the full system context from al
 - Monitor **Low Attendance** warnings automatically.
 - Export attendance reports in Excel and PDF formats.
 
+### HOD (Version 2 — Read-Only Monitoring)
+- Login with `role = 'hod'` in the `faculty` table.
+- View ALL classes created by any faculty in the department.
+- Drill into a class to see all subjects (courses) mapped to it, along with the faculty name and overall attendance %.
+- Subjects below 75% attendance are highlighted in red.
+- Drill into a subject to see today's (or any past date's) attendance: Total, Present, Absent counts + full student list with status.
+- View a "Low Attendance" tab listing all students below 75% for a given subject.
+- **Strictly view-only** — cannot mark or edit attendance.
+
 ### Future Scopes
 - **Students:** To view their own attendance percentages.
-- **Admin/HOD:** To view department-wide reports and manage faculty.
 
 ---
 

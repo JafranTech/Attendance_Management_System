@@ -132,6 +132,31 @@ Phase 8 — Testing & Deployment
 
 ---
 
+## Phase 9 — HOD Monitoring System (Version 2)
+
+**Goal:** A strict, read-only monitoring dashboard for the HOD to oversee all classes, subjects, and student attendance across the department.
+
+**Deliverables:**
+- [ ] Database: Add `role` column to `faculty` table (`'faculty'` | `'hod'`)
+- [ ] Database: Add HOD-specific RLS read policies on all tables
+- [ ] Auth: Update `AuthContext.jsx` to fetch `faculty` profile + role after login
+- [ ] Auth: Update `AppRouter.jsx` — role-based redirect + `HodProtectedRoute`
+- [ ] Service: `src/services/hodService.js` — all HOD read queries
+- [ ] Hooks: `src/hooks/useHod.js` — React Query wrappers for HOD
+- [ ] UI: `src/components/hod/HodLayout.jsx` — separate HOD shell/navbar
+- [ ] UI: `src/pages/hod/HodDashboard.jsx` — horizontal class cards (IT Final Year, etc.)
+- [ ] UI: `src/pages/hod/HodClassDetail.jsx` — subjects per class with % and faculty name
+- [ ] UI: `src/pages/hod/HodCourseDetail.jsx` — daily attendance + date picker + low attendance tab
+
+**Rules:**
+- HOD is **view-only** — zero write access
+- Low attendance threshold: **75%** (highlighted red)
+- HOD can view **any past date** via date picker (defaults to today)
+- Everything reads through existing `classes`, `courses`, `attendance`, `attendance_details` tables
+- Same React + Vite codebase — no Next.js or Three.js
+
+---
+
 ## Current Phase Tracker
 
 ```
@@ -142,6 +167,7 @@ Phase 4 — Core Attendance          [x] In Progress  [x] Complete
 Phase 5 — History & Edits          [x] In Progress  [x] Complete
 Phase 6 — Excel & PDF Reports      [x] In Progress  [x] Complete
 Phase 7 — Dashboard Analytics      [x] In Progress  [x] Complete
-Phase 8 — Testing & Deployment     [x] In Progress  [x] Complete ← LIVE: it-erp.vercel.app
+Phase 8 — Testing & Deployment     [x] In Progress  [x] Complete ← Version 1 LIVE: it-erp.vercel.app
+Phase 9 — HOD Monitoring System    [ ] In Progress  [ ] Complete ← Version 2 ACTIVE
 ```
 

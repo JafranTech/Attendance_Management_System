@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { supabase } from '../lib/supabase'
 import { useNavigate, Navigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -31,16 +32,28 @@ export default function LoginPage() {
     resolver: zodResolver(loginSchema),
   })
 
+  const { role } = useAuth()
+
   if (!loading && session) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={role === 'hod' ? '/hod/dashboard' : '/dashboard'} replace />
   }
 
   const onSubmit = async (data) => {
     try {
       setIsLoggingIn(true)
-      await signIn(data.email, data.password)
+      const result = await signIn(data.email, data.password)
+      // Fetch the faculty profile to determine role before navigating
+      const { data: profile } = await supabase
+        .from('faculty')
+        .select('role')
+        .eq('id', result.user.id)
+        .single()
       toast.success('Login successful!')
-      navigate('/dashboard', { replace: true })
+      if (profile?.role === 'hod') {
+        navigate('/hod/dashboard', { replace: true })
+      } else {
+        navigate('/dashboard', { replace: true })
+      }
     } catch (error) {
       toast.error(error.message || 'Login failed. Please check your credentials.')
     } finally {

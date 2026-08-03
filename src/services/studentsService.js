@@ -190,6 +190,15 @@ export async function bulkImportStudents(courseId, studentsArray) {
     existingMap[s.roll_number] = s.class_id
   })
 
+  // Fetch course to get target_class_id
+  const { data: course } = await supabase
+    .from('courses')
+    .select('target_class_id')
+    .eq('id', courseId)
+    .single()
+  
+  const targetClassId = course?.target_class_id || null
+
   // Upsert all students
   const { data: students, error: studentsError } = await supabase
     .from('students')
@@ -199,7 +208,7 @@ export async function bulkImportStudents(courseId, studentsArray) {
         name: s.name,
         email: s.email || null,
         batch: s.batch || null,
-        class_id: existingMap[s.rollNumber] || null, // preserve existing class_id
+        class_id: existingMap[s.rollNumber] || targetClassId, // preserve existing or set to target
       })),
       { onConflict: 'roll_number' }
     )

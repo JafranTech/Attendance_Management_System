@@ -41,6 +41,7 @@ CREATE TABLE faculty (
   name         text NOT NULL,
   email        text NOT NULL UNIQUE,
   department   text,
+  role         text NOT NULL DEFAULT 'faculty' CHECK (role IN ('faculty', 'hod')),
   created_at   timestamptz DEFAULT now()
 );
 
