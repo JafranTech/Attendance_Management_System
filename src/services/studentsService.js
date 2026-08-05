@@ -53,6 +53,11 @@ export async function addStudentToClass(classId, { rollNumber, name, email, batc
     .single()
 
   if (error) throw new Error('Unable to save student. Please try again.')
+  
+  if (data) {
+    await syncClassStudentsToCourses(classId, [data.id])
+  }
+  
   return data
 }
 
@@ -163,6 +168,11 @@ export async function bulkImportStudentsToClass(classId, studentsArray) {
     .select()
 
   if (studentsError) throw new Error('Unable to import students. Please try again.')
+
+  if (students && students.length > 0) {
+    await syncClassStudentsToCourses(classId, students.map((s) => s.id))
+  }
+
   return students
 }
 
@@ -225,3 +235,33 @@ export async function bulkImportStudents(courseId, studentsArray) {
   if (linkError) throw new Error('Unable to enroll imported students. Please try again.')
   return students
 }
+
+/**
+ * Automatically syncs students added to a class section to all default (core) courses for that class.
+ */
+async function syncClassStudentsToCourses(classId, studentIds) {
+  if (!classId || !studentIds || studentIds.length === 0) return
+
+  // Fetch all core courses mapped to this class
+  const { data: courses, error } = await supabase
+    .from('courses')
+    .select('id')
+    .eq('target_class_id', classId)
+    .eq('enrollment_type', 'default')
+
+  if (error || !courses || courses.length === 0) return
+
+  // Prepare links
+  const links = []
+  courses.forEach((c) => {
+    studentIds.forEach((sid) => {
+      links.push({ course_id: c.id, student_id: sid })
+    })
+  })
+
+  // Upsert into course_students
+  await supabase
+    .from('course_students')
+    .upsert(links, { onConflict: 'course_id,student_id' })
+}
+

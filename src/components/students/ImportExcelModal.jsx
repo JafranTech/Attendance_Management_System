@@ -24,7 +24,8 @@ export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
     const reader = new FileReader()
     reader.onload = (evt) => {
       try {
-        const wb = XLSX.read(evt.target.result, { type: 'binary' })
+        const data = new Uint8Array(evt.target.result)
+        const wb = XLSX.read(data, { type: 'array' })
         const ws = wb.Sheets[wb.SheetNames[0]]
         const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
 
@@ -49,7 +50,7 @@ export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
         setParseError('Could not read file. Please ensure it is a valid Excel (.xlsx) file.')
       }
     }
-    reader.readAsBinaryString(file)
+    reader.readAsArrayBuffer(file)
   }
 
   const handleImport = async () => {
@@ -82,21 +83,22 @@ export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
         </div>
 
         {/* File input */}
-        <div
-          className="border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all"
-          onClick={() => fileInputRef.current?.click()}
+        <label
+          htmlFor="excel-file-input"
+          className="block border-2 border-dashed border-slate-200 rounded-xl p-6 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50/30 transition-all focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500"
         >
           <FileSpreadsheet className="w-8 h-8 text-slate-300 mx-auto mb-2" />
           <p className="text-sm font-medium text-slate-600">Click to choose Excel file</p>
           <p className="text-xs text-slate-400 mt-1">.xlsx files only</p>
           <input
+            id="excel-file-input"
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            className="sr-only"
             onChange={handleFile}
           />
-        </div>
+        </label>
 
         {/* Error */}
         {parseError && (

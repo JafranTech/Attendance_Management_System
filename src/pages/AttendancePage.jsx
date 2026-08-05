@@ -381,7 +381,7 @@ export default function AttendancePage() {
       <div className="flex items-start justify-between mb-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900">{selection.courseName}</h1>
-          <p className="text-sm text-slate-500 flex items-center gap-1.5 mt-0.5">
+          <p className="text-sm text-slate-500 flex flex-wrap items-center gap-1.5 mt-0.5">
             {format(parseISO(selection.date), 'EEEE, dd MMM yyyy')}
             <span className="text-slate-300">·</span>
             {isLabBlock ? (
@@ -484,7 +484,9 @@ export default function AttendancePage() {
             viewMode === 'list' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           )}
         >
-          <List className="w-4 h-4" /> <span>List View</span>
+          <List className="w-4 h-4" />
+          <span className="hidden sm:inline">List View</span>
+          <span className="sm:hidden">List</span>
         </button>
         <button
           onClick={() => setViewMode('quick')}
@@ -493,7 +495,9 @@ export default function AttendancePage() {
             viewMode === 'quick' ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
           )}
         >
-          <Zap className="w-4 h-4" /> <span>Quick Entry</span>
+          <Zap className="w-4 h-4" />
+          <span className="hidden sm:inline">Quick Entry</span>
+          <span className="sm:hidden">Quick</span>
         </button>
         <button
           onClick={() => setViewMode('interactive')}
@@ -555,9 +559,10 @@ export default function AttendancePage() {
               className="px-3 sm:px-4 shrink-0 text-amber-700 border-amber-200 bg-amber-50 hover:bg-amber-100 hover:text-amber-800"
               onClick={() => setIsHolidayPopupOpen(true)}
               disabled={saveAttendance.isPending}
+              title="Mark Holiday"
             >
-              <Calendar className="w-4 h-4 mr-1.5 sm:mr-2" />
-              <span className="text-sm font-semibold">Holiday</span>
+              <Calendar className="w-4 h-4 sm:mr-2" />
+              <span className="text-sm font-semibold hidden sm:inline">Holiday</span>
             </Button>
 
             {/* Present All Button */}
@@ -566,13 +571,11 @@ export default function AttendancePage() {
               className="px-3 sm:px-4 shrink-0 text-green-700 border-green-200 bg-green-50 hover:bg-green-100 hover:text-green-800"
               onClick={handlePresentAll}
               disabled={saveAttendance.isPending}
+              title={visibleStudents.length > 0 && visibleStudents.every(s => statuses[s.id] === 'Present') ? 'Clear All' : 'Mark All Present'}
             >
-              <CheckSquare className="w-4 h-4 mr-1.5" />
+              <CheckSquare className="w-4 h-4 sm:mr-1.5" />
               <span className="text-sm font-semibold hidden sm:inline">
                 {visibleStudents.length > 0 && visibleStudents.every(s => statuses[s.id] === 'Present') ? 'Clear All' : 'Present All'}
-              </span>
-              <span className="text-sm font-semibold sm:hidden">
-                {visibleStudents.length > 0 && visibleStudents.every(s => statuses[s.id] === 'Present') ? 'Clear' : 'All'}
               </span>
             </Button>
 
@@ -588,9 +591,15 @@ export default function AttendancePage() {
               {saveAttendance.isPending ? (
                 <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
               ) : unfilledCount > 0 ? (
-                <>Save ({unfilledCount} unmarked)</>
+                <>
+                  <span className="hidden sm:inline">Save ({unfilledCount} unmarked)</span>
+                  <span className="sm:hidden">Save ({unfilledCount} left)</span>
+                </>
               ) : (
-                <><CheckCircle2 className="w-4 h-4 mr-1.5 sm:mr-2" />Save ({visibleStudents.length})</>
+                <>
+                  <CheckCircle2 className="w-4 h-4 mr-1.5 sm:mr-2" />
+                  <span>Save ({visibleStudents.length})</span>
+                </>
               )}
             </Button>
           </div>
