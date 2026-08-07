@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { format, subMonths } from 'date-fns'
+import { format, subMonths, addDays, subDays } from 'date-fns'
 import {
   Users, UserCheck, UserX, Calendar, AlertTriangle,
-  BookOpen, User, CheckCircle2, XCircle, Clock, Search
+  BookOpen, User, CheckCircle2, XCircle, Clock, Search,
+  ChevronLeft, ChevronRight
 } from 'lucide-react'
 
 import { HodLayout } from '../../components/hod/HodLayout'
@@ -30,6 +31,18 @@ export default function HodCourseDetail() {
   const [activeTab, setActiveTab] = useState('daily')
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+
+  const handlePrevDate = () => {
+    const prevDate = subDays(new Date(selectedDate), 1)
+    setSelectedDate(format(prevDate, 'yyyy-MM-dd'))
+  }
+
+  const handleNextDate = () => {
+    if (selectedDate < today) {
+      const nextDate = addDays(new Date(selectedDate), 1)
+      setSelectedDate(format(nextDate, 'yyyy-MM-dd'))
+    }
+  }
 
   // Fetch course info
   const { data: course } = useQuery({
@@ -127,20 +140,42 @@ export default function HodCourseDetail() {
 
           {/* Date / Range Picker */}
           {activeTab === 'daily' ? (
-            <div className="flex items-center gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-4 py-3">
+            <div className="flex items-center gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-4 py-2">
               <Calendar className="w-5 h-5 text-indigo-600 flex-shrink-0" />
               <div>
                 <p className="text-xs text-slate-500 mb-0.5 font-medium">Viewing date</p>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  max={today}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent text-slate-900 text-sm font-bold focus:outline-none cursor-pointer"
-                />
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={handlePrevDate} 
+                    className="p-0.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-700 transition-colors focus:outline-none"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <input
+                    type="date"
+                    value={selectedDate}
+                    max={today}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="bg-transparent text-slate-900 text-sm font-bold focus:outline-none cursor-pointer"
+                  />
+                  <button 
+                    onClick={handleNextDate} 
+                    disabled={selectedDate >= today}
+                    className={`p-0.5 rounded transition-colors focus:outline-none ${selectedDate >= today ? 'opacity-30 cursor-not-allowed text-slate-400' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'}`}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-              {isToday && (
-                <span className="text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full">TODAY</span>
+              {isToday ? (
+                <span className="text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full ml-1">TODAY</span>
+              ) : (
+                <button 
+                  onClick={() => setSelectedDate(today)}
+                  className="text-[10px] font-bold bg-indigo-50 border border-indigo-200 text-indigo-700 px-2 py-0.5 rounded-full hover:bg-indigo-100 transition-colors ml-1 cursor-pointer focus:outline-none"
+                >
+                  GO TO TODAY
+                </button>
               )}
             </div>
           ) : (
