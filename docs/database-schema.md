@@ -13,11 +13,11 @@ auth.users (Supabase managed)
     │
     └──▶ faculty (1:1)
             │
-            ├──▶ classes (1:many)
-            │       │
-            │       └──▶ students (1:many per class)
-            │
             └──▶ courses (1:many)
+                    │
+                    ├──▶ target_class_id ──▶ classes
+                    │                          │
+                    │                          └──▶ students (1:many per class)
                     │
                     ├──▶ course_students (many:many bridge to students)
                     │
@@ -49,12 +49,11 @@ ALTER TABLE faculty ENABLE ROW LEVEL SECURITY;
 ```
 
 ### Table: `classes`
-Master list of class sections managed by a faculty.
+Master list of class sections.
 
 ```sql
 CREATE TABLE classes (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  faculty_id   uuid NOT NULL REFERENCES faculty(id) ON DELETE CASCADE,
   name         text NOT NULL,
   created_at   timestamptz DEFAULT now()
 );
