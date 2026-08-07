@@ -1,4 +1,4 @@
-﻿import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
 
 export const LOW_ATTENDANCE_THRESHOLD = 75
@@ -12,7 +12,6 @@ export async function fetchAllClassesForHod() {
     .from('classes')
     .select(`
       id, name, created_at,
-      faculty:faculty_id(name),
       students(count)
     `)
     .order('name', { ascending: true })
