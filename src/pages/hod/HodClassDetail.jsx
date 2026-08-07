@@ -1,7 +1,8 @@
-﻿import { useParams, useNavigate } from 'react-router-dom'
-import { BookOpen, ChevronRight, User, AlertTriangle, CheckCircle2, GraduationCap } from 'lucide-react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { BookOpen, ChevronRight, User, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { HodLayout } from '../../components/hod/HodLayout'
 import { useHodClasses, useHodCoursesByClass, useHodCourseAttendanceSummary } from '../../hooks/useHod'
+import cresLogo from '../../assets/Logo.jpeg'
 import { LOW_ATTENDANCE_THRESHOLD } from '../../services/hodService'
 
 export default function HodClassDetail() {
@@ -17,7 +18,7 @@ export default function HodClassDetail() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-2 text-slate-500 text-sm mb-3 font-medium">
-          <GraduationCap className="w-4 h-4" />
+          <img src={cresLogo} className="w-4 h-4 object-contain inline-block" alt="" />
           <button onClick={() => navigate('/hod/dashboard')} className="hover:text-indigo-600 transition-colors">All Classes</button>
           <span>/</span>
           <span className="text-indigo-600 uppercase font-bold tracking-wide">{currentClass?.name || 'Class'}</span>

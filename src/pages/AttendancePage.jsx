@@ -203,7 +203,9 @@ export default function AttendancePage() {
   }
 
   const handleConfirmSave = async () => {
-    // Only save statuses for students in the CURRENT batch view.
+    // Guard: never save if students are still loading or not available
+    if (studentsLoading || !students || students.length === 0) return
+
     // Students NOT in this batch get NO record (nil) — not absent.
     const studentStatuses = visibleStudents
       .filter(s => statuses[s.id]) // only those actually marked
@@ -428,8 +430,8 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* LAB BATCH Filter — only shown when lab block AND batches exist */}
-      {isLabBlock && hasBatches && (
+      {/* LAB BATCH Filter — shown when batches exist */}
+      {hasBatches && (
         <div className="mb-5">
           <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
             <Pencil className="w-3 h-3" /> Lab Batch

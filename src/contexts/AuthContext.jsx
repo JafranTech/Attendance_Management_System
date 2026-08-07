@@ -61,7 +61,7 @@ export function AuthProvider({ children }) {
   const role = profile?.role ?? null // 'faculty' | 'hod' | null
 
   return (
-    <AuthContext.Provider value={{ session, user, profile, role, loading, signIn, signOut, updatePassword }}>
+    <AuthContext.Provider value={{ session, user, profile, role, loading, signIn, signOut, updatePassword, fetchProfile }}>
       {children}
     </AuthContext.Provider>
   )

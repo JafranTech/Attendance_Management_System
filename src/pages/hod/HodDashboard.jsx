@@ -1,8 +1,9 @@
-﻿import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, ChevronRight, GraduationCap, Activity, AlertTriangle } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Users, BookOpen, ChevronRight, AlertTriangle, Calendar } from 'lucide-react'
 import { HodLayout } from '../../components/hod/HodLayout'
 import { useHodClasses } from '../../hooks/useHod'
 import { useAuth } from '../../hooks/useAuth'
+import cresLogo from '../../assets/Logo.jpeg'
 
 export default function HodDashboard() {
   const navigate = useNavigate()
@@ -17,11 +18,10 @@ export default function HodDashboard() {
       {/* Header */}
       <div className="mb-10">
         <div className="flex items-center gap-2 text-indigo-600 text-sm font-bold mb-3 uppercase tracking-wider">
-          <Activity className="w-4 h-4" />
           Live Monitoring Console
         </div>
         <h1 className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
-          Good {getGreeting()}, {profile?.name?.split(' ')[0] || 'HOD'}.
+          Good {getGreeting()}, {profile?.name || 'HOD'}.
         </h1>
         <p className="text-slate-500 mt-2 text-base">
           Monitoring <span className="text-slate-800 font-bold">{totalClasses}</span> class sections
@@ -32,9 +32,9 @@ export default function HodDashboard() {
 
       {/* Stats row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-10">
-        <StatCard label="Class Sections" value={totalClasses} icon={GraduationCap} color="indigo" />
+        <StatCard label="Class Sections" value={totalClasses} imageSrc={cresLogo} color="indigo" />
         <StatCard label="Total Students" value={totalStudents} icon={Users} color="blue" />
-        <StatCard label="Today" value={new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })} icon={Activity} color="violet" isText />
+        <StatCard label="Today" value={new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' })} icon={Calendar} color="violet" isText />
       </div>
 
       {/* Heading */}
@@ -63,7 +63,7 @@ export default function HodDashboard() {
       {/* Empty */}
       {!isLoading && !isError && classes?.length === 0 && (
         <div className="text-center py-24 bg-white border border-slate-200 rounded-3xl border-dashed">
-          <GraduationCap className="w-16 h-16 mx-auto mb-4 text-slate-300" />
+          <img src={cresLogo} className="w-16 h-16 mx-auto mb-4 object-contain opacity-30 grayscale" alt="" />
           <p className="text-lg font-bold text-slate-700">No classes found</p>
           <p className="text-sm mt-1 text-slate-500">Faculty members need to create class sections first.</p>
         </div>
@@ -74,6 +74,7 @@ export default function HodDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
           {classes.map((cls) => {
             const studentCount = cls.students?.[0]?.count ?? 0
+            const courseCount = cls.courses?.[0]?.count ?? 0
             return (
               <button
                 key={cls.id}
@@ -82,7 +83,7 @@ export default function HodDashboard() {
               >
                 {/* Icon */}
                 <div className="w-12 h-12 bg-indigo-50 group-hover:bg-indigo-100 border border-indigo-100 rounded-xl flex items-center justify-center mb-5 transition-colors">
-                  <GraduationCap className="w-6 h-6 text-indigo-600" />
+                  <img src={cresLogo} className="w-6 h-6 object-contain" alt="" />
                 </div>
 
                 {/* Class Name */}
@@ -98,7 +99,7 @@ export default function HodDashboard() {
                   </div>
                   <div className="flex items-center gap-1.5 text-slate-500 text-sm font-medium">
                     <BookOpen className="w-4 h-4" />
-                    <span>View subjects</span>
+                    <span>{courseCount} subject{courseCount !== 1 ? 's' : ''}</span>
                   </div>
                 </div>
 
@@ -115,7 +116,7 @@ export default function HodDashboard() {
   )
 }
 
-function StatCard({ label, value, icon: Icon, color, isText }) {
+function StatCard({ label, value, icon: Icon, color, isText, imageSrc }) {
   const colorMap = {
     indigo: 'bg-indigo-50 border-indigo-100 text-indigo-700',
     blue: 'bg-blue-50 border-blue-100 text-blue-700',
@@ -129,7 +130,11 @@ function StatCard({ label, value, icon: Icon, color, isText }) {
   
   return (
     <div className={`border rounded-2xl p-5 flex items-center gap-4 ${colorMap[color]}`}>
-      <Icon className={`w-7 h-7 flex-shrink-0 ${iconColorMap[color]}`} />
+      {imageSrc ? (
+        <img src={imageSrc} className="w-7 h-7 object-contain rounded flex-shrink-0" alt="" />
+      ) : (
+        <Icon className={`w-7 h-7 flex-shrink-0 ${iconColorMap[color]}`} />
+      )}
       <div>
         <p className={`text-xs font-bold uppercase tracking-wider mb-1 ${iconColorMap[color]} opacity-80`}>{label}</p>
         <p className={`font-black leading-none ${isText ? 'text-lg mt-1' : 'text-3xl'}`}>{value}</p>

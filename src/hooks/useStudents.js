@@ -11,7 +11,7 @@ import {
   bulkImportStudentsToClass,
   enrollDefaultStudents,
   enrollSelectedStudents,
-  updateStudentBatches,
+  updateStudentBatchesForCourse,
   bulkDeleteStudents,
 } from '../services/studentsService'
 
@@ -131,7 +131,8 @@ export function useEnrollSelectedStudents() {
 export function useUpdateStudentBatches(courseId) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: ({ studentIds, batch }) => updateStudentBatches(studentIds, batch),
+    // Write to course_students.batch — scoped by courseId so batches never bleed across courses
+    mutationFn: ({ studentIds, batch }) => updateStudentBatchesForCourse(courseId, studentIds, batch),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', courseId] })
     },

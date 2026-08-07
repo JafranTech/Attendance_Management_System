@@ -14,7 +14,7 @@ export default function LowAttendancePage() {
   const filteredStudents = useMemo(() => {
     if (!lowStudents) return []
     if (selectedCourse === 'all') return lowStudents
-    return lowStudents.filter((s) => s.courseCode === selectedCourse)
+    return lowStudents.filter((s) => s.courseId === selectedCourse)
   }, [lowStudents, selectedCourse])
 
   // Build unique course options from the low-attendance data
@@ -23,11 +23,11 @@ export default function LowAttendancePage() {
     const seen = new Set()
     return lowStudents
       .filter((s) => {
-        if (seen.has(s.courseCode)) return false
-        seen.add(s.courseCode)
+        if (seen.has(s.courseId)) return false
+        seen.add(s.courseId)
         return true
       })
-      .map((s) => ({ code: s.courseCode, name: s.courseName || s.courseCode }))
+      .map((s) => ({ id: s.courseId, code: s.courseCode, name: s.courseName || s.courseCode }))
   }, [lowStudents])
 
   const criticalCount = filteredStudents.filter((s) => s.percentage < 50).length
@@ -82,14 +82,14 @@ export default function LowAttendancePage() {
               All Classes ({lowStudents?.length ?? 0})
             </button>
             {courseOptions.map((c) => {
-              const count = lowStudents?.filter((s) => s.courseCode === c.code).length ?? 0
+              const count = lowStudents?.filter((s) => s.courseId === c.id).length ?? 0
               return (
                 <button
-                  key={c.code}
-                  onClick={() => setSelectedCourse(c.code)}
+                  key={c.id}
+                  onClick={() => setSelectedCourse(c.id)}
                   className={clsx(
                     'px-3 py-1.5 rounded-lg text-sm font-medium transition-all border',
-                    selectedCourse === c.code
+                    selectedCourse === c.id
                       ? 'bg-amber-600 text-white border-amber-600'
                       : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
                   )}

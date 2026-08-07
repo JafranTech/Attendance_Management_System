@@ -1,9 +1,9 @@
-﻿import { useState } from 'react'
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
+import { format, subMonths } from 'date-fns'
 import {
   Users, UserCheck, UserX, Calendar, AlertTriangle,
-  BookOpen, User, CheckCircle2, XCircle, Clock
+  BookOpen, User, CheckCircle2, XCircle, Clock, Search
 } from 'lucide-react'
 
 import { HodLayout } from '../../components/hod/HodLayout'
@@ -22,8 +22,14 @@ export default function HodCourseDetail() {
   const { courseId } = useParams()
   const navigate = useNavigate()
   const today = format(new Date(), 'yyyy-MM-dd')
+  const defaultStartDate = format(subMonths(new Date(), 1), 'yyyy-MM-dd')
+  
   const [selectedDate, setSelectedDate] = useState(today)
+  const [startDate, setStartDate] = useState(defaultStartDate)
+  const [endDate, setEndDate] = useState(today)
   const [activeTab, setActiveTab] = useState('daily')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
 
   // Fetch course info
   const { data: course } = useQuery({
@@ -41,8 +47,8 @@ export default function HodCourseDetail() {
   })
 
   const { data: sessions, isLoading: sessionsLoading } = useHodDailyAttendance(courseId, selectedDate)
-  const { data: studentsWithPct, isLoading: pctLoading } = useHodStudentsWithPercentage(courseId)
-  const { data: summary } = useHodCourseAttendanceSummary(courseId)
+  const { data: studentsWithPct, isLoading: pctLoading } = useHodStudentsWithPercentage(courseId, startDate, endDate)
+  const { data: summary } = useHodCourseAttendanceSummary(courseId, startDate, endDate)
 
   const classId = course?.target_class_id
 
@@ -119,23 +125,50 @@ export default function HodCourseDetail() {
             </div>
           </div>
 
-          {/* Date Picker */}
-          <div className="flex items-center gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-4 py-3">
-            <Calendar className="w-5 h-5 text-indigo-600 flex-shrink-0" />
-            <div>
-              <p className="text-xs text-slate-500 mb-0.5 font-medium">Viewing date</p>
-              <input
-                type="date"
-                value={selectedDate}
-                max={today}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent text-slate-900 text-sm font-bold focus:outline-none cursor-pointer"
-              />
+          {/* Date / Range Picker */}
+          {activeTab === 'daily' ? (
+            <div className="flex items-center gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-4 py-3">
+              <Calendar className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-slate-500 mb-0.5 font-medium">Viewing date</p>
+                <input
+                  type="date"
+                  value={selectedDate}
+                  max={today}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-slate-900 text-sm font-bold focus:outline-none cursor-pointer"
+                />
+              </div>
+              {isToday && (
+                <span className="text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full">TODAY</span>
+              )}
             </div>
-            {isToday && (
-              <span className="text-[10px] font-bold bg-emerald-50 border border-emerald-200 text-emerald-700 px-2 py-0.5 rounded-full">TODAY</span>
-            )}
-          </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-4 py-2 flex-wrap sm:flex-nowrap">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-600 flex-shrink-0" />
+                <span className="text-xs text-slate-500 font-medium whitespace-nowrap">Range:</span>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="date"
+                  value={startDate}
+                  max={endDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-800 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                />
+                <span className="text-slate-400 text-xs">to</span>
+                <input
+                  type="date"
+                  value={endDate}
+                  min={startDate}
+                  max={today}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="bg-slate-50 border border-slate-200 rounded-lg px-2 py-1 text-slate-800 text-xs font-bold focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -171,6 +204,39 @@ export default function HodCourseDetail() {
         ))}
       </div>
 
+      {/* Search / Filter Row */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            placeholder="Search student or roll no..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 w-full font-medium"
+          />
+        </div>
+        
+        {activeTab === 'daily' && (
+          <div className="flex gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+            {['all', 'Present', 'Absent'].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+                  statusFilter === status
+                    ? 'bg-indigo-600 border-indigo-600 text-white shadow-md'
+                    : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {status === 'all' ? 'All Status' : status}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Tab: Daily Attendance */}
       {activeTab === 'daily' && (
         <div>
@@ -193,8 +259,16 @@ export default function HodCourseDetail() {
             <div className="space-y-4">
               {hourStats.map((h, idx) => {
                 const hourDetails = sessions?.[idx]?.attendance_details ?? []
-                const absentInHour = hourDetails.filter(d => d.status === 'Absent')
-                const presentInHour = hourDetails.filter(d => d.status === 'Present')
+                const filteredDetails = hourDetails
+                  .filter(d => {
+                    const matchesSearch = !searchQuery || 
+                      d.students?.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                      d.students?.roll_number?.toLowerCase().includes(searchQuery.toLowerCase())
+                    const matchesStatus = statusFilter === 'all' || d.status === statusFilter
+                    return matchesSearch && matchesStatus
+                  })
+                  .sort((a,b) => (a.students?.roll_number || '').localeCompare(b.students?.roll_number || ''))
+
                 return (
                   <div key={h.hour} className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
                     {/* Hour header */}
@@ -217,17 +291,21 @@ export default function HodCourseDetail() {
 
                     {/* Student list */}
                     <div className="divide-y divide-slate-100">
-                      {hourDetails
-                        .sort((a,b) => (a.students?.roll_number || '').localeCompare(b.students?.roll_number || ''))
-                        .map(d => (
-                        <div key={d.student_id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 transition-colors">
-                          <div>
-                            <p className="text-sm font-bold text-slate-900">{d.students?.name}</p>
-                            <p className="text-xs font-medium text-slate-500">{d.students?.roll_number}</p>
-                          </div>
-                          <StatusBadge status={d.status} />
+                      {filteredDetails.length === 0 ? (
+                        <div className="p-8 text-center text-slate-400 text-sm font-medium">
+                          No students matching filters.
                         </div>
-                      ))}
+                      ) : (
+                        filteredDetails.map(d => (
+                          <div key={d.student_id} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-50 transition-colors">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{d.students?.name}</p>
+                              <p className="text-xs font-medium text-slate-500">{d.students?.roll_number}</p>
+                            </div>
+                            <StatusBadge status={d.status} />
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )
@@ -255,28 +333,45 @@ export default function HodCourseDetail() {
           )}
 
           {!pctLoading && lowAttStudents.length > 0 && (
-            <div className="bg-white border border-red-200 shadow-sm rounded-2xl overflow-hidden">
-              <div className="px-5 py-3 border-b border-red-100 bg-red-50 flex items-center gap-2">
-                <AlertTriangle className="w-4 h-4 text-red-600" />
-                <p className="text-sm font-bold text-red-700">{lowAttStudents.length} student{lowAttStudents.length !== 1 ? 's' : ''} below {LOW_ATTENDANCE_THRESHOLD}%</p>
-              </div>
-              <div className="divide-y divide-slate-100">
-                {lowAttStudents.map(s => (
-                  <div key={s.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
-                    <div>
-                      <p className="text-sm font-bold text-slate-900">{s.name}</p>
-                      <p className="text-xs font-medium text-slate-500">{s.roll_number}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-red-500 rounded-full" style={{ width: `${s.percentage}%` }} />
-                      </div>
-                      <span className="text-sm font-bold text-red-600 w-10 text-right">{s.percentage}%</span>
-                    </div>
+            (() => {
+              const filteredLow = lowAttStudents.filter(s =>
+                !searchQuery || 
+                s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                s.roll_number?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              if (filteredLow.length === 0) {
+                return (
+                  <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl border-dashed">
+                    <AlertTriangle className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-bold text-slate-700">No students matching search</p>
                   </div>
-                ))}
-              </div>
-            </div>
+                )
+              }
+              return (
+                <div className="bg-white border border-red-200 shadow-sm rounded-2xl overflow-hidden">
+                  <div className="px-5 py-3 border-b border-red-100 bg-red-50 flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-red-600" />
+                    <p className="text-sm font-bold text-red-700">{filteredLow.length} student{filteredLow.length !== 1 ? 's' : ''} below {LOW_ATTENDANCE_THRESHOLD}%</p>
+                  </div>
+                  <div className="divide-y divide-slate-100">
+                    {filteredLow.map(s => (
+                      <div key={s.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 transition-colors">
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{s.name}</p>
+                          <p className="text-xs font-medium text-slate-500">{s.roll_number}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                            <div className="h-full bg-red-500 rounded-full" style={{ width: `${s.percentage}%` }} />
+                          </div>
+                          <span className="text-sm font-bold text-red-600 w-10 text-right">{s.percentage}%</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })()
           )}
         </div>
       )}
@@ -298,52 +393,69 @@ export default function HodCourseDetail() {
           )}
 
           {!pctLoading && studentsWithPct && studentsWithPct.length > 0 && (
-            <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
-              <table className="w-full">
-                <thead className="bg-slate-50">
-                  <tr className="border-b border-slate-200">
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Roll No.</th>
-                    <th className="text-left px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
-                    <th className="text-right px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Attendance</th>
-                    <th className="text-right px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Progress</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {studentsWithPct.map(s => (
-                    <tr key={s.id} className={`transition-colors ${s.isLow ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-slate-50'}`}>
-                      <td className="px-5 py-3 text-sm font-mono font-medium text-slate-500">{s.roll_number}</td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-900">{s.name}</span>
-                          {s.isLow && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        {s.percentage != null ? (
-                          <span className={`text-sm font-bold ${s.isLow ? 'text-red-600' : 'text-emerald-600'}`}>
-                            {s.percentage}%
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 font-medium text-xs">No data</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-3 hidden sm:table-cell">
-                        {s.percentage != null && (
-                          <div className="flex items-center justify-end gap-2">
-                            <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${s.isLow ? 'bg-red-500' : 'bg-emerald-500'}`}
-                                style={{ width: `${s.percentage}%` }}
-                              />
+            (() => {
+              const filteredAll = studentsWithPct.filter(s =>
+                !searchQuery || 
+                s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                s.roll_number?.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              if (filteredAll.length === 0) {
+                return (
+                  <div className="text-center py-20 bg-white border border-slate-200 rounded-3xl border-dashed">
+                    <Users className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                    <p className="font-bold text-slate-700">No students matching search</p>
+                  </div>
+                )
+              }
+              return (
+                <div className="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden">
+                  <table className="w-full">
+                    <thead className="bg-slate-50">
+                      <tr className="border-b border-slate-200">
+                        <th className="text-left px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Roll No.</th>
+                        <th className="text-left px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
+                        <th className="text-right px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Attendance</th>
+                        <th className="text-right px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider hidden sm:table-cell">Progress</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredAll.map(s => (
+                        <tr key={s.id} className={`transition-colors ${s.isLow ? 'bg-red-50/50 hover:bg-red-50' : 'hover:bg-slate-50'}`}>
+                          <td className="px-5 py-3 text-sm font-mono font-medium text-slate-500">{s.roll_number}</td>
+                          <td className="px-5 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-slate-900">{s.name}</span>
+                              {s.isLow && <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />}
                             </div>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="px-5 py-3 text-right">
+                            {s.percentage != null ? (
+                              <span className={`text-sm font-bold ${s.isLow ? 'text-red-600' : 'text-emerald-600'}`}>
+                                {s.percentage}%
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 font-medium text-xs">No data</span>
+                            )}
+                          </td>
+                          <td className="px-5 py-3 hidden sm:table-cell">
+                            {s.percentage != null && (
+                              <div className="flex items-center justify-end gap-2">
+                                <div className="w-24 h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                                  <div
+                                    className={`h-full rounded-full ${s.isLow ? 'bg-red-500' : 'bg-emerald-500'}`}
+                                    style={{ width: `${s.percentage}%` }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )
+            })()
           )}
         </div>
       )}

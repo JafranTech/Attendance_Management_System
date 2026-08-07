@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { useRemoveStudent, useRemoveStudentFromClass } from '../../hooks/useStudents'
 import { Badge } from '../ui/Badge'
 import { StudentAttendanceModal } from './StudentAttendanceModal'
+import clsx from 'clsx'
 
 export function StudentList({ students, courseId, classId, selectedIds, onSelectChange, onSelectAll }) {
   const removeStudentCourse = useRemoveStudent(courseId)
@@ -84,7 +85,19 @@ export function StudentList({ students, courseId, classId, selectedIds, onSelect
                   <td className="px-4 py-3">
                     <Badge variant="blue">{student.roll_number}</Badge>
                   </td>
-                  <td className="px-4 py-3 font-medium text-slate-800">{student.name}</td>
+                  <td className="px-4 py-3 font-medium text-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span>{student.name}</span>
+                      {student.batch && (
+                        <span className={clsx(
+                          'text-[9px] font-bold px-1.5 py-0.5 rounded-full md:hidden flex-shrink-0',
+                          student.batch.toLowerCase().includes('1') ? 'bg-purple-100 text-purple-700 border border-purple-200' : 'bg-green-100 text-green-700 border border-green-200'
+                        )}>
+                          {student.batch.toLowerCase().includes('1') ? 'B1' : 'B2'}
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-slate-500 hidden sm:table-cell">{student.email || '—'}</td>
                   <td className="px-4 py-3 text-slate-500 hidden md:table-cell">
                     {student.batch ? (
@@ -97,7 +110,7 @@ export function StudentList({ students, courseId, classId, selectedIds, onSelect
                     <button
                       onClick={(e) => handleRemove(e, student)}
                       disabled={removeStudent.isPending}
-                      className="p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                      className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 md:p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
                       aria-label={`Remove ${student.name}`}
                     >
                       <Trash2 className="w-4 h-4" />

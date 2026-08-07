@@ -1,5 +1,6 @@
-﻿import { useState } from 'react'
-import { Plus, FileSpreadsheet, GraduationCap, Loader2, Users, Search, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2 } from 'lucide-react'
+import cresLogo from '../assets/Logo.jpeg'
 import { useClasses } from '../hooks/useClasses'
 import { useClassStudents, useBulkDeleteStudents } from '../hooks/useStudents'
 import { ImportExcelModal } from '../components/students/ImportExcelModal'
@@ -7,13 +8,17 @@ import { AddStudentModal } from '../components/students/AddStudentModal'
 import { StudentList } from '../components/students/StudentList'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
+import { useAuth } from '../hooks/useAuth'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 export default function ClassesPage() {
   const { data: classes, isLoading: classesLoading } = useClasses()
+  const { user } = useAuth()
 
-  const [activeClassId, setActiveClassId] = useState(() => localStorage.getItem('activeClassId') || null)
+  // Namespace localStorage key by user ID so Faculty A's selection never bleeds into Faculty B
+  const storageKey = user?.id ? `activeClassId_${user.id}` : 'activeClassId'
+  const [activeClassId, setActiveClassId] = useState(() => localStorage.getItem(storageKey) || null)
   const [isImportModalOpen, setImportModalOpen] = useState(false)
   const [isAddStudentModalOpen, setAddStudentModalOpen] = useState(false)
 
@@ -68,7 +73,7 @@ export default function ClassesPage() {
   // Switch class → clear selection
   const handleSwitchClass = (classId) => {
     setActiveClassId(classId)
-    localStorage.setItem('activeClassId', classId)
+    localStorage.setItem(storageKey, classId)
     setSelectedStudentIds(new Set())
     setSearchTerm('')
   }
@@ -81,7 +86,7 @@ export default function ClassesPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <GraduationCap className="w-7 h-7 text-indigo-600" />
+            <img src={cresLogo} className="w-7 h-7 object-contain inline-block" alt="" />
             Class Sections & Master Lists
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -178,7 +183,7 @@ export default function ClassesPage() {
           <div className="p-12 flex justify-center"><LoadingSpinner /></div>
         ) : !currentClassId ? (
           <div className="p-16 text-center text-slate-400">
-            <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-20" />
+            <img src={cresLogo} className="w-12 h-12 mx-auto mb-3 object-contain opacity-20 grayscale" alt="" />
             <p className="text-sm">Select a class to view its students.</p>
           </div>
         ) : students?.length === 0 ? (

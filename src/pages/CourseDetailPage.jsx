@@ -161,8 +161,8 @@ export default function CourseDetailPage() {
               </Button>
             </div>
 
-            <div className="flex items-center gap-3">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
@@ -172,7 +172,7 @@ export default function CourseDetailPage() {
                   className="pl-9 pr-4 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-64"
                 />
               </div>
-              <Button onClick={() => navigate(`/attendance?courseId=${courseId}`)} className="bg-green-600 hover:bg-green-700 text-white">
+              <Button onClick={() => navigate(`/attendance?courseId=${courseId}`)} className="bg-green-600 hover:bg-green-700 text-white w-full sm:w-auto">
                 <ClipboardCheck className="w-4 h-4 mr-2" />
                 Take Attendance
               </Button>

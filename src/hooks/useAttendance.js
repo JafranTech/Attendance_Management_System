@@ -17,6 +17,7 @@ export function useCheckAttendance(courseId, date, hour) {
     queryKey: ['attendance-check', courseId, date, hour],
     queryFn: () => checkAttendanceExists(courseId, date, hour),
     enabled: !!courseId && !!date && !!hour,
+    staleTime: 1000 * 30, // 30 seconds — re-check if stale
   })
 }
 

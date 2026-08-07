@@ -72,7 +72,7 @@ CREATE TABLE students (
   roll_number  text NOT NULL UNIQUE,
   name         text NOT NULL,
   email        text,
-  batch        text,
+  batch        text, -- DEPRECATED: Moved to course_students for course-specific batch splits
   created_at   timestamptz DEFAULT now()
 );
 
@@ -103,6 +103,7 @@ Maps students to the courses they are enrolled in.
 CREATE TABLE course_students (
   course_id    uuid NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
   student_id   uuid NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+  batch        text, -- Added: Maps student to a specific lab batch (Batch 1 / Batch 2) for this course
   created_at   timestamptz DEFAULT now(),
   PRIMARY KEY (course_id, student_id)
 );

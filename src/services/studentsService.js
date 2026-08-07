@@ -5,15 +5,27 @@ export async function fetchStudentsForCourse(courseId) {
     .from('course_students')
     .select(`
       student_id,
+      batch,
       students (
-        id, roll_number, name, email, batch, class_id, created_at
+        id, roll_number, name, email, class_id, created_at
       )
     `)
     .eq('course_id', courseId)
-    .order('created_at', { ascending: true })
 
   if (error) throw new Error('Unable to load students. Please refresh and try again.')
-  return data.map((row) => row.students)
+  
+  const mapped = data.map((row) => ({
+    ...row.students,
+    // course_students.batch is the per-course source of truth (not students.batch)
+    batch: row.batch ?? null,
+  }))
+
+  // Robustly sort by roll_number alphanumeric order
+  return mapped.sort((a, b) => {
+    const aRoll = a.roll_number || ''
+    const bRoll = b.roll_number || ''
+    return aRoll.localeCompare(bRoll, undefined, { numeric: true, sensitivity: 'base' })
+  })
 }
 
 export async function fetchStudentsByClass(classId) {
@@ -62,32 +74,34 @@ export async function addStudentToClass(classId, { rollNumber, name, email, batc
 }
 
 export async function addStudentToCourse(courseId, { rollNumber, name, email, batch }) {
-  // Fetch existing class_id
+  // Fetch existing class_id so we don't wipe it
   const { data: existing } = await supabase
     .from('students')
     .select('class_id')
     .eq('roll_number', rollNumber)
     .maybeSingle()
 
-  // Upsert student (by roll number)
+  // Upsert the student identity row — do NOT write batch here (batch is per-course, not global)
   const { data: student, error: studentError } = await supabase
     .from('students')
-    .upsert({ 
-      roll_number: rollNumber, 
-      name, 
-      email, 
-      batch,
-      class_id: existing?.class_id || null
+    .upsert({
+      roll_number: rollNumber,
+      name,
+      email,
+      class_id: existing?.class_id || null,
     }, { onConflict: 'roll_number' })
     .select()
     .single()
 
   if (studentError) throw new Error('Unable to save student. Please try again.')
 
-  // Link to course
+  // Link to course AND set batch on course_students (per-course batch, not global)
   const { error: linkError } = await supabase
     .from('course_students')
-    .upsert({ course_id: courseId, student_id: student.id }, { onConflict: 'course_id,student_id' })
+    .upsert(
+      { course_id: courseId, student_id: student.id, batch: batch || null },
+      { onConflict: 'course_id,student_id' }
+    )
 
   if (linkError) throw new Error('Unable to enroll student in course. Please try again.')
   return student
@@ -176,6 +190,22 @@ export async function bulkImportStudentsToClass(classId, studentsArray) {
   return students
 }
 
+export async function updateStudentBatchesForCourse(courseId, studentIds, batch) {
+  // Update batch on course_students for this specific course — NOT the shared students table.
+  // This ensures Blockchain batch assignments don't bleed into IoT or any other course.
+  if (!courseId || !studentIds || studentIds.length === 0) return
+
+  // Build the update as individual upserts per student to hit the composite PK
+  const updates = studentIds.map((studentId) => ({ course_id: courseId, student_id: studentId, batch }))
+
+  const { error } = await supabase
+    .from('course_students')
+    .upsert(updates, { onConflict: 'course_id,student_id' })
+
+  if (error) throw new Error('Unable to update student batches. Please try again.')
+}
+
+// Legacy: kept for backward compat but no longer called for batch assignment
 export async function updateStudentBatches(studentIds, batch) {
   if (!studentIds || studentIds.length === 0) return
 
@@ -188,7 +218,7 @@ export async function updateStudentBatches(studentIds, batch) {
 }
 
 export async function bulkImportStudents(courseId, studentsArray) {
-  // Fetch existing class_ids
+  // Fetch existing class_ids so we don't overwrite them
   const rollNumbers = studentsArray.map(s => s.rollNumber)
   const { data: existing } = await supabase
     .from('students')
@@ -206,10 +236,10 @@ export async function bulkImportStudents(courseId, studentsArray) {
     .select('target_class_id')
     .eq('id', courseId)
     .single()
-  
+
   const targetClassId = course?.target_class_id || null
 
-  // Upsert all students
+  // Upsert student identity rows — do NOT write batch here (batch is per-course, not global)
   const { data: students, error: studentsError } = await supabase
     .from('students')
     .upsert(
@@ -217,8 +247,7 @@ export async function bulkImportStudents(courseId, studentsArray) {
         roll_number: s.rollNumber,
         name: s.name,
         email: s.email || null,
-        batch: s.batch || null,
-        class_id: existingMap[s.rollNumber] || targetClassId, // preserve existing or set to target
+        class_id: existingMap[s.rollNumber] || targetClassId,
       })),
       { onConflict: 'roll_number' }
     )
@@ -226,8 +255,17 @@ export async function bulkImportStudents(courseId, studentsArray) {
 
   if (studentsError) throw new Error('Unable to import students. Please try again.')
 
-  // Link all to course
-  const links = students.map((s) => ({ course_id: courseId, student_id: s.id }))
+  // Build a map from roll_number → student id for batch assignment
+  const rollToStudent = {}
+  students.forEach(s => { rollToStudent[s.roll_number] = s.id })
+
+  // Link all to course AND set per-course batch on course_students
+  const links = studentsArray.map((s) => ({
+    course_id: courseId,
+    student_id: rollToStudent[s.rollNumber],
+    batch: s.batch || null,
+  })).filter(l => l.student_id) // guard against any missing students
+
   const { error: linkError } = await supabase
     .from('course_students')
     .upsert(links, { onConflict: 'course_id,student_id' })

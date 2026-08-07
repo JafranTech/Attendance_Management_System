@@ -33,7 +33,7 @@ export function CourseCard({ course }) {
           <button
             onClick={handleDelete}
             disabled={deleteCourse.isPending}
-            className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
+            className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 md:p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
             aria-label="Delete course"
           >
             <Trash2 className="w-4 h-4" />

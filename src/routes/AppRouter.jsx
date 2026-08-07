@@ -15,6 +15,8 @@ import HodDashboard from '../pages/hod/HodDashboard'
 import HodClassDetail from '../pages/hod/HodClassDetail'
 import HodCourseDetail from '../pages/hod/HodCourseDetail'
 import { useAuth } from '../hooks/useAuth'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
+import { OfflineBlocker } from '../components/ui/OfflineBlocker'
 import Logo from '../assets/Logo.jpeg'
 
 // Faculty layout wrapper — blocks HOD from faculty pages
@@ -39,6 +41,11 @@ function HodProtectedRoute({ children }) {
 
 export function AppRouter() {
   const { loading, role } = useAuth()
+  const isOnline = useOnlineStatus()
+
+  if (!isOnline) {
+    return <OfflineBlocker />
+  }
 
   if (loading) {
     return (

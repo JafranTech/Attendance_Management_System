@@ -28,9 +28,10 @@ export async function saveAttendance(courseId, date, hour, studentStatuses, isHo
   if (existing) {
     attendanceId = existing.id
     // Update it in case it's being changed to/from a holiday
-    await supabase.from('attendance')
+    const { error: upErr } = await supabase.from('attendance')
       .update({ is_holiday: isHoliday, holiday_reason: holidayReason })
       .eq('id', attendanceId)
+    if (upErr) throw new Error('Unable to update session record. Please try again.')
   } else {
     const { data: newAtt, error: attError } = await supabase
       .from('attendance')
@@ -43,7 +44,8 @@ export async function saveAttendance(courseId, date, hour, studentStatuses, isHo
 
   // 2. Handle details: if holiday, clear all. Otherwise, update for current batch.
   if (isHoliday) {
-    await supabase.from('attendance_details').delete().eq('attendance_id', attendanceId)
+    const { error: delErr } = await supabase.from('attendance_details').delete().eq('attendance_id', attendanceId)
+    if (delErr) throw new Error('Unable to clear attendance details for holiday. Please try again.')
   } else if (studentStatuses && studentStatuses.length > 0) {
     // Delete existing details for these specific students to avoid unique constraint errors if any
     const studentIds = studentStatuses.map(s => s.studentId)
@@ -130,7 +132,12 @@ export async function fetchSessionDetails(attendanceId) {
     }
   })
 
-  return detailsWithEdits
+  // Sort by roll number alphanumeric order
+  return detailsWithEdits.sort((a, b) => {
+    const rollA = a.students?.roll_number || ''
+    const rollB = b.students?.roll_number || ''
+    return rollA.localeCompare(rollB, undefined, { numeric: true, sensitivity: 'base' })
+  })
 }
 
 export async function deleteSession(attendanceId) {

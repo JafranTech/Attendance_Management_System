@@ -1,4 +1,4 @@
-﻿import { useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import {
   fetchAllClassesForHod,
   fetchCoursesByClassForHod,
@@ -24,12 +24,12 @@ export function useHodCoursesByClass(classId) {
   })
 }
 
-export function useHodCourseAttendanceSummary(courseId) {
+export function useHodCourseAttendanceSummary(courseId, startDate = null, endDate = null) {
   return useQuery({
-    queryKey: ['hod', 'attendance-summary', courseId],
-    queryFn: () => fetchCourseAttendanceSummary(courseId),
+    queryKey: ['hod', 'attendance-summary', courseId, startDate, endDate],
+    queryFn: () => fetchCourseAttendanceSummary(courseId, startDate, endDate),
     enabled: !!courseId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 2,
   })
 }
 
@@ -42,11 +42,11 @@ export function useHodDailyAttendance(courseId, date) {
   })
 }
 
-export function useHodStudentsWithPercentage(courseId) {
+export function useHodStudentsWithPercentage(courseId, startDate = null, endDate = null) {
   return useQuery({
-    queryKey: ['hod', 'students-pct', courseId],
-    queryFn: () => fetchStudentsWithPercentage(courseId),
+    queryKey: ['hod', 'students-pct', courseId, startDate, endDate],
+    queryFn: () => fetchStudentsWithPercentage(courseId, startDate, endDate),
     enabled: !!courseId,
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 60 * 2,
   })
 }

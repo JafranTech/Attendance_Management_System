@@ -12,7 +12,8 @@ export async function fetchAllClassesForHod() {
     .from('classes')
     .select(`
       id, name, created_at,
-      students(count)
+      students(count),
+      courses:courses(count)
     `)
     .order('name', { ascending: true })
 
@@ -43,12 +44,17 @@ export async function fetchCoursesByClassForHod(classId) {
  * Compute per-student attendance percentage for a course.
  * Returns { overall, perStudent: { [studentId]: pct } }
  */
-export async function fetchCourseAttendanceSummary(courseId) {
-  const { data: sessions, error: sessErr } = await supabase
+export async function fetchCourseAttendanceSummary(courseId, startDate = null, endDate = null) {
+  let query = supabase
     .from('attendance')
     .select('id')
     .eq('course_id', courseId)
     .eq('is_holiday', false)
+
+  if (startDate) query = query.gte('date', startDate)
+  if (endDate) query = query.lte('date', endDate)
+
+  const { data: sessions, error: sessErr } = await query
 
   if (sessErr) throw new Error('Unable to fetch session data.')
   if (!sessions || sessions.length === 0) return { overall: null, perStudent: {} }
@@ -113,7 +119,7 @@ export async function fetchDailyAttendanceForHod(courseId, date) {
 /**
  * Fetch enrolled students for a course with overall attendance percentage.
  */
-export async function fetchStudentsWithPercentage(courseId) {
+export async function fetchStudentsWithPercentage(courseId, startDate = null, endDate = null) {
   const { data: enrolled, error: enrollErr } = await supabase
     .from('course_students')
     .select(`student_id, students(id, roll_number, name)`)
@@ -122,7 +128,7 @@ export async function fetchStudentsWithPercentage(courseId) {
   if (enrollErr) throw new Error('Unable to fetch enrolled students.')
   if (!enrolled || enrolled.length === 0) return []
 
-  const { perStudent } = await fetchCourseAttendanceSummary(courseId)
+  const { perStudent } = await fetchCourseAttendanceSummary(courseId, startDate, endDate)
 
   const result = enrolled.map((e) => ({
     id: e.students.id,
