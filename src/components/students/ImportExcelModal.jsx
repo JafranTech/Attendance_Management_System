@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react'
 import * as XLSX from 'xlsx'
-import { Upload, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet } from 'lucide-react'
+import { Upload, AlertCircle, CheckCircle2, Loader2, FileSpreadsheet, UserCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { useBulkImportStudents, useBulkImportStudentsToClass } from '../../hooks/useStudents'
+import { supabase } from '../../lib/supabase'
 
 export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
   const [preview, setPreview] = useState([])
@@ -56,7 +57,32 @@ export function ImportExcelModal({ isOpen, onClose, courseId, classId }) {
   const handleImport = async () => {
     try {
       const result = await bulkImport.mutateAsync(preview)
-      toast.success(`${result.length} students imported successfully!`)
+      toast.success(`${result.length} students imported!`)
+
+      // Auto-provision student auth accounts in the background
+      if (result && result.length > 0) {
+        const provisionPayload = result.map(s => ({
+          roll_number: s.roll_number,
+          name: s.name,
+          student_id: s.id,
+        }))
+
+        try {
+          const { error: fnError } = await supabase.functions.invoke('provision-student', {
+            body: { action: 'provision', students: provisionPayload },
+          })
+          if (fnError) {
+            console.warn('Account provisioning error:', fnError.message)
+            toast('Students imported. Accounts will be provisioned shortly.', { icon: 'ℹ️' })
+          } else {
+            toast.success(`${result.length} student accounts provisioned!`)
+          }
+        } catch (provErr) {
+          console.warn('Provisioning failed (non-critical):', provErr)
+          toast('Students imported. Contact admin if login issues occur.', { icon: 'ℹ️' })
+        }
+      }
+
       setPreview([])
       if (fileInputRef.current) fileInputRef.current.value = ''
       onClose()

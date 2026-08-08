@@ -5,6 +5,7 @@ import clsx from 'clsx'
 const tabs = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Home' },
   { to: '/attendance', icon: ClipboardCheck, label: 'Attend' },
+  { to: '/classes', icon: Users, label: 'Classes' },
   { to: '/courses', icon: BookOpen, label: 'Courses' },
   { to: '/history', icon: History, label: 'History' },
 ]
@@ -12,7 +13,7 @@ const tabs = [
 export function MobileNav() {
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-100 shadow-lg safe-bottom">
-      <div className="grid grid-cols-4 h-16">
+      <div className="grid grid-cols-5 h-16">
         {tabs.map(({ to, icon: Icon, label }) => (
           <NavLink
             key={to}

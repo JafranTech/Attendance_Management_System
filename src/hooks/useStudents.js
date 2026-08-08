@@ -14,6 +14,7 @@ import {
   updateStudentBatchesForCourse,
   bulkDeleteStudents,
 } from '../services/studentsService'
+import { supabase } from '../lib/supabase'
 
 export function useStudents(courseId) {
   return useQuery({
@@ -76,7 +77,31 @@ export function useRemoveStudent(courseId) {
 export function useRemoveStudentFromClass(classId) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (studentId) => removeStudentFromClass(studentId),
+    mutationFn: async (studentId) => {
+      // 1. Fetch the student record to get their roll_number for deactivation
+      const { data: student } = await supabase
+        .from('students')
+        .select('id, roll_number, name')
+        .eq('id', studentId)
+        .single()
+
+      // 2. Deactivate their auth account BEFORE removing from DB
+      if (student?.roll_number) {
+        try {
+          await supabase.functions.invoke('provision-student', {
+            body: {
+              action: 'deactivate',
+              students: [{ roll_number: student.roll_number, name: student.name, student_id: student.id }],
+            },
+          })
+        } catch (deactivateErr) {
+          console.warn('Deactivation failed (non-critical):', deactivateErr)
+        }
+      }
+
+      // 3. Remove from students table
+      return removeStudentFromClass(studentId)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', 'class', classId] })
       queryClient.invalidateQueries({ queryKey: ['classes'] })

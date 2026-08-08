@@ -66,17 +66,20 @@ Master list of all students belonging to a specific class section.
 
 ```sql
 CREATE TABLE students (
-  id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  class_id     uuid NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-  roll_number  text NOT NULL UNIQUE,
-  name         text NOT NULL,
-  email        text,
-  batch        text, -- DEPRECATED: Moved to course_students for course-specific batch splits
-  created_at   timestamptz DEFAULT now()
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  class_id       uuid NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
+  roll_number    text NOT NULL UNIQUE,
+  name           text NOT NULL,
+  email          text,
+  batch          text, -- DEPRECATED: Moved to course_students for course-specific batch splits
+  auth_user_id   uuid REFERENCES auth.users(id) ON DELETE SET NULL, -- [V3] Links to student's Supabase auth account
+  created_at     timestamptz DEFAULT now()
 );
 
 ALTER TABLE students ENABLE ROW LEVEL SECURITY;
 ```
+
+> **V3 Note:** `auth_user_id` is populated automatically by the `provision-student` Edge Function when faculty adds a student. It is `NULL` until provisioned. When a student is removed, their auth account is banned (not deleted), so this field retains the reference for historical audit purposes.
 
 ### Table: `courses`
 Courses taught by faculty.
@@ -198,6 +201,84 @@ ALTER TABLE attendance_edits ENABLE ROW LEVEL SECURITY;
 
 ```sql
 -- Fast lookups for faculty dashboard
+CREATE INDEX idx_attendance_course_date ON attendance(course_id, date);
+CREATE INDEX idx_attendance_details_attendance ON attendance_details(attendance_id);
+CREATE INDEX idx_attendance_details_student ON attendance_details(student_id);
+CREATE INDEX idx_course_students_course ON course_students(course_id);
+CREATE INDEX idx_course_students_student ON course_students(student_id);
+-- Fast lookups for student portal (V3)
+CREATE INDEX idx_students_auth_user ON students(auth_user_id);
+CREATE INDEX idx_students_roll_number ON students(roll_number);
+```
+
+---
+
+## V3 RLS Policies — Student Portal
+
+These policies allow students to read ONLY their own attendance data. They cannot write anything.
+
+### `students` Table — Student self-read
+```sql
+CREATE POLICY "Student can view own record"
+ON students FOR SELECT
+USING (auth_user_id = auth.uid());
+```
+
+### `course_students` Table — Student sees own enrollments
+```sql
+CREATE POLICY "Student can view own enrollments"
+ON course_students FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM students
+    WHERE id = course_students.student_id
+    AND auth_user_id = auth.uid()
+  )
+);
+```
+
+### `courses` Table — Student can see courses they are enrolled in
+```sql
+CREATE POLICY "Student can view enrolled courses"
+ON courses FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM course_students cs
+    JOIN students s ON cs.student_id = s.id
+    WHERE cs.course_id = courses.id
+    AND s.auth_user_id = auth.uid()
+  )
+);
+```
+
+### `attendance` Table — Student sees sessions for their courses
+```sql
+CREATE POLICY "Student can view attendance sessions for their courses"
+ON attendance FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM course_students cs
+    JOIN students s ON cs.student_id = s.id
+    WHERE cs.course_id = attendance.course_id
+    AND s.auth_user_id = auth.uid()
+  )
+);
+```
+
+### `attendance_details` Table — Student sees only their own detail rows
+```sql
+CREATE POLICY "Student can view own attendance details"
+ON attendance_details FOR SELECT
+USING (
+  EXISTS (
+    SELECT 1 FROM students
+    WHERE id = attendance_details.student_id
+    AND auth_user_id = auth.uid()
+  )
+);
+```
+
+> **Security Note:** Students have SELECT-only access. No INSERT, UPDATE, or DELETE policies are granted to students on any table.
 CREATE INDEX idx_courses_faculty_id ON courses(faculty_id);
 
 -- Fetching students for a course

@@ -7,19 +7,35 @@ export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined) // undefined = loading
   const [user, setUser] = useState(null)
   const [profile, setProfile] = useState(null)     // faculty row: { name, role, ... }
-  const [profileLoading, setProfileLoading] = useState(true) // stays true until profile fetch done
+  const [profileLoading, setProfileLoading] = useState(true)
 
-  const fetchProfile = useCallback(async (userId) => {
+  const fetchProfile = useCallback(async (authUser) => {
     setProfileLoading(true)
-    if (!userId) {
+    if (!authUser) {
       setProfile(null)
       setProfileLoading(false)
       return
     }
+
+    // Students are identified by user_metadata.role = 'student'
+    // They don't have a row in the faculty table, so skip that query
+    if (authUser.user_metadata?.role === 'student') {
+      setProfile({
+        id: authUser.id,
+        name: authUser.user_metadata?.name ?? authUser.email?.split('@')[0] ?? 'Student',
+        email: authUser.email,
+        role: 'student',
+        roll_number: authUser.user_metadata?.roll_number ?? '',
+      })
+      setProfileLoading(false)
+      return
+    }
+
+    // Faculty / HOD: look up the faculty table
     const { data } = await supabase
       .from('faculty')
       .select('id, name, email, department, role')
-      .eq('id', userId)
+      .eq('id', authUser.id)
       .single()
     setProfile(data ?? null)
     setProfileLoading(false)
@@ -29,13 +45,13 @@ export function AuthProvider({ children }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      fetchProfile(session?.user?.id ?? null)
+      fetchProfile(session?.user ?? null)
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      fetchProfile(session?.user?.id ?? null)
+      fetchProfile(session?.user ?? null)
     })
 
     return () => subscription.unsubscribe()
@@ -58,7 +74,7 @@ export function AuthProvider({ children }) {
 
   // loading = true until BOTH session and profile are resolved
   const loading = session === undefined || profileLoading
-  const role = profile?.role ?? null // 'faculty' | 'hod' | null
+  const role = profile?.role ?? null // 'faculty' | 'hod' | 'student' | null
 
   return (
     <AuthContext.Provider value={{ session, user, profile, role, loading, signIn, signOut, updatePassword, fetchProfile }}>

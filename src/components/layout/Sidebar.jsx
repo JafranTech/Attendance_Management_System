@@ -8,6 +8,7 @@ import {
   Settings,
   LogOut,
   AlertTriangle,
+  Users,
 } from 'lucide-react'
 import Logo from '../../assets/Logo.jpeg'
 import { useAuth } from '../../hooks/useAuth'
@@ -15,6 +16,7 @@ import clsx from 'clsx'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/classes', icon: Users, label: 'Classes & Roster' },
   { to: '/courses', icon: BookOpen, label: 'Courses' },
   { to: '/attendance', icon: ClipboardCheck, label: 'Attendance' },
   { to: '/history', icon: History, label: 'History' },

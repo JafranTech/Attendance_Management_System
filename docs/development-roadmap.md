@@ -137,16 +137,16 @@ Phase 8 — Testing & Deployment
 **Goal:** A strict, read-only monitoring dashboard for the HOD to oversee all classes, subjects, and student attendance across the department.
 
 **Deliverables:**
-- [ ] Database: Add `role` column to `faculty` table (`'faculty'` | `'hod'`)
-- [ ] Database: Add HOD-specific RLS read policies on all tables
-- [ ] Auth: Update `AuthContext.jsx` to fetch `faculty` profile + role after login
-- [ ] Auth: Update `AppRouter.jsx` — role-based redirect + `HodProtectedRoute`
-- [ ] Service: `src/services/hodService.js` — all HOD read queries
-- [ ] Hooks: `src/hooks/useHod.js` — React Query wrappers for HOD
-- [ ] UI: `src/components/hod/HodLayout.jsx` — separate HOD shell/navbar
-- [ ] UI: `src/pages/hod/HodDashboard.jsx` — horizontal class cards (IT Final Year, etc.)
-- [ ] UI: `src/pages/hod/HodClassDetail.jsx` — subjects per class with % and faculty name
-- [ ] UI: `src/pages/hod/HodCourseDetail.jsx` — daily attendance + date picker + low attendance tab
+- [x] Database: Add `role` column to `faculty` table (`'faculty'` | `'hod'`)
+- [x] Database: Add HOD-specific RLS read policies on all tables
+- [x] Auth: Update `AuthContext.jsx` to fetch `faculty` profile + role after login
+- [x] Auth: Update `AppRouter.jsx` — role-based redirect + `HodProtectedRoute`
+- [x] Service: `src/services/hodService.js` — all HOD read queries
+- [x] Hooks: `src/hooks/useHod.js` — React Query wrappers for HOD
+- [x] UI: `src/components/hod/HodLayout.jsx` — separate HOD shell/navbar
+- [x] UI: `src/pages/hod/HodDashboard.jsx` — horizontal class cards (IT Final Year, etc.)
+- [x] UI: `src/pages/hod/HodClassDetail.jsx` — subjects per class with % and faculty name
+- [x] UI: `src/pages/hod/HodCourseDetail.jsx` — daily attendance + date picker + low attendance tab
 
 **Rules:**
 - HOD is **view-only** — zero write access
@@ -157,17 +157,77 @@ Phase 8 — Testing & Deployment
 
 ---
 
+## Phase 10 — Student Self-Service Portal (Version 3) ← ACTIVE
+
+**Goal:** Allow students to log in and view their own attendance data in a mobile-first, read-only portal. Accounts are automatically provisioned and deactivated by faculty actions in Classes & Roster.
+
+### Sub-Phase 10A — Database & Backend
+**Deliverables:**
+- [ ] Database: Add `auth_user_id uuid REFERENCES auth.users(id)` column to `students` table
+- [ ] Database: Apply V3 RLS policies (student self-read on `students`, `course_students`, `courses`, `attendance`, `attendance_details`)
+- [ ] Database: Add performance indexes (`idx_students_auth_user`, `idx_students_roll_number`)
+- [ ] Edge Function: `supabase/functions/provision-student/index.ts`
+  - Accepts `{ action: 'provision' | 'deactivate', roll_number, name }` payload
+  - `provision`: Creates auth account `roll_number@crescent.education` / `crescent1234`, links `auth_user_id`
+  - `deactivate`: Bans the auth account, preserves all historical data
+  - `re-provision`: Detects existing banned account, re-enables it
+  - Uses `SUPABASE_SERVICE_ROLE_KEY` — never exposed to frontend
+
+### Sub-Phase 10B — Auth & Routing
+**Deliverables:**
+- [ ] Auth: Update `AuthContext.jsx` to detect `role = 'student'` from `user_metadata`
+- [ ] Auth: Update `AppRouter.jsx` — add `StudentProtectedRoute` + student routes (`/student/dashboard`, `/student/course/:courseId`)
+- [ ] Auth: On login, if `role === 'student'` → redirect to `/student/dashboard`
+
+### Sub-Phase 10C — Student Dashboard UI (Mobile-First)
+**Deliverables:**
+- [ ] Service: `src/services/studentPortalService.js`
+  - `getMySubjects(studentId)` → enrolled courses + attendance % per course
+  - `getMyCourseAttendance(courseId, studentId)` → session history + status per session
+- [ ] Hook: `src/hooks/useStudentPortal.js` — React Query wrappers
+- [ ] Page: `src/pages/student/StudentDashboard.jsx`
+  - Mobile-first layout (optimized for 390px screens)
+  - Header: "Hello, [Student Name]" greeting
+  - Subject cards: Course name, code, green/red progress bar, percentage (XX/YY = ZZ%)
+  - No Present/Absent buttons — strictly read-only
+  - Design: matches existing project (white cards, blue accents, Inter font)
+- [ ] Page: `src/pages/student/StudentCourseDetail.jsx`
+  - Back button → returns to dashboard
+  - Filter pills: All / Present / Absent (client-side filter)
+  - Session cards: Date (e.g. "Fri 24 Jul"), Period/Hour, Status badge (green Present / red Absent)
+  - Cards sorted newest first
+
+### Sub-Phase 10D — Faculty Side Integration
+**Deliverables:**
+- [ ] Update `ImportExcelModal.jsx` — after import, call `provision-student` Edge Function for each new student
+- [ ] Update `AddStudentModal.jsx` (single add) — call `provision-student` after save
+- [ ] Update `useRemoveStudentFromClass` — call `provision-student` with `action='deactivate'` before deletion
+
+**Rules:**
+- Student portal is **strictly isolated** in `src/pages/student/` — no shared layout with faculty/HOD
+- Student has **zero write access** to any table
+- Account management is **exclusively** done through the Edge Function
+- Design must be **mobile-first** — the student dashboard is primarily a phone experience
+- **Do not break** any existing faculty or HOD feature during implementation
+
+---
+
 ## Current Phase Tracker
 
 ```
-Phase 1 — Project Foundation       [x] In Progress  [x] Complete
-Phase 2 — Course & Students        [x] In Progress  [x] Complete
-Phase 3 — Timetable & Holidays     [x] In Progress  [x] Complete
-Phase 4 — Core Attendance          [x] In Progress  [x] Complete
-Phase 5 — History & Edits          [x] In Progress  [x] Complete
-Phase 6 — Excel & PDF Reports      [x] In Progress  [x] Complete
-Phase 7 — Dashboard Analytics      [x] In Progress  [x] Complete
-Phase 8 — Testing & Deployment     [x] In Progress  [x] Complete ← Version 1 LIVE: it-erp.vercel.app
-Phase 9 — HOD Monitoring System    [ ] In Progress  [ ] Complete ← Version 2 ACTIVE
+Phase 1  — Project Foundation       [x] Complete
+Phase 2  — Course & Students        [x] Complete
+Phase 3  — Timetable & Holidays     [x] Complete
+Phase 4  — Core Attendance          [x] Complete
+Phase 5  — History & Edits          [x] Complete
+Phase 6  — Excel & PDF Reports      [x] Complete
+Phase 7  — Dashboard Analytics      [x] Complete
+Phase 8  — Testing & Deployment     [x] Complete ← Version 1 LIVE: it-erp.vercel.app
+Phase 9  — HOD Monitoring System    [x] Complete ← Version 2 LIVE
+Phase 10 — Student Portal           [ ] In Progress ← Version 3 ACTIVE
+  10A — Database & Edge Function    [ ] TODO
+  10B — Auth & Routing              [ ] TODO
+  10C — Student Dashboard UI        [ ] TODO
+  10D — Faculty Side Integration    [ ] TODO
 ```
 

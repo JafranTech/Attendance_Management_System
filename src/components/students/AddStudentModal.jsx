@@ -8,6 +8,7 @@ import { Label } from '../ui/Label'
 import { Input } from '../ui/Input'
 import { Button } from '../ui/Button'
 import { useAddStudent, useAddStudentToClass } from '../../hooks/useStudents'
+import { supabase } from '../../lib/supabase'
 
 const schema = z.object({
   rollNumber: z.string().min(1, 'Roll number is required'),
@@ -27,8 +28,23 @@ export function AddStudentModal({ isOpen, onClose, courseId, classId }) {
 
   const onSubmit = async (data) => {
     try {
-      await addStudent.mutateAsync(data)
+      const result = await addStudent.mutateAsync(data)
       toast.success('Student added successfully!')
+
+      // Auto-provision student auth account
+      if (result?.id) {
+        try {
+          await supabase.functions.invoke('provision-student', {
+            body: {
+              action: 'provision',
+              students: [{ roll_number: data.rollNumber, name: data.name, student_id: result.id }],
+            },
+          })
+        } catch (provErr) {
+          console.warn('Provisioning failed (non-critical):', provErr)
+        }
+      }
+
       reset()
       onClose()
     } catch (err) {

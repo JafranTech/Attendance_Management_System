@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2 } from 'lucide-react'
+import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2, RefreshCw } from 'lucide-react'
 import cresLogo from '../assets/Logo.jpeg'
 import { useClasses } from '../hooks/useClasses'
 import { useClassStudents, useBulkDeleteStudents } from '../hooks/useStudents'
@@ -9,6 +9,7 @@ import { StudentList } from '../components/students/StudentList'
 import { Button } from '../components/ui/Button'
 import { LoadingSpinner } from '../components/ui/LoadingSpinner'
 import { useAuth } from '../hooks/useAuth'
+import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
@@ -21,6 +22,43 @@ export default function ClassesPage() {
   const [activeClassId, setActiveClassId] = useState(() => localStorage.getItem(storageKey) || null)
   const [isImportModalOpen, setImportModalOpen] = useState(false)
   const [isAddStudentModalOpen, setAddStudentModalOpen] = useState(false)
+  const [isSyncing, setIsSyncing] = useState(false)
+
+  // Backfill: provision auth accounts for ALL existing students who don't have one yet
+  const handleSyncAllAccounts = async () => {
+    setIsSyncing(true)
+    try {
+      // Fetch all students without an auth_user_id
+      const { data: unprovisioned, error } = await supabase
+        .from('students')
+        .select('id, roll_number, name')
+        .is('auth_user_id', null)
+
+      if (error) throw new Error(error.message)
+      if (!unprovisioned || unprovisioned.length === 0) {
+        toast.success('All students already have accounts!')
+        setIsSyncing(false)
+        return
+      }
+
+      const payload = unprovisioned.map(s => ({
+        roll_number: s.roll_number,
+        name: s.name,
+        student_id: s.id,
+      }))
+
+      const { error: fnError } = await supabase.functions.invoke('provision-student', {
+        body: { action: 'backfill', students: payload },
+      })
+
+      if (fnError) throw new Error(fnError.message)
+      toast.success(`${unprovisioned.length} student accounts synced!`)
+    } catch (err) {
+      toast.error(`Sync failed: ${err.message}`)
+    } finally {
+      setIsSyncing(false)
+    }
+  }
 
   // Search
   const [searchTerm, setSearchTerm] = useState('')
@@ -95,7 +133,7 @@ export default function ClassesPage() {
             class sections in the department.
           </p>
         </div>
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
           {selectedStudentIds.size > 0 && (
             <button
               onClick={handleBulkDelete}
@@ -109,6 +147,15 @@ export default function ClassesPage() {
               Delete Selected ({selectedStudentIds.size})
             </button>
           )}
+          <button
+            onClick={handleSyncAllAccounts}
+            disabled={isSyncing}
+            title="Create login accounts for all existing students who don't have one yet"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-60"
+          >
+            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {isSyncing ? 'Syncing...' : 'Sync Accounts'}
+          </button>
           <Button
             onClick={() => setImportModalOpen(true)}
             variant="outline"

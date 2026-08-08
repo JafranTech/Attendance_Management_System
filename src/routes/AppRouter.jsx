@@ -14,15 +14,18 @@ import ClassesPage from '../pages/ClassesPage'
 import HodDashboard from '../pages/hod/HodDashboard'
 import HodClassDetail from '../pages/hod/HodClassDetail'
 import HodCourseDetail from '../pages/hod/HodCourseDetail'
+import StudentDashboard from '../pages/student/StudentDashboard'
+import StudentCourseDetail from '../pages/student/StudentCourseDetail'
 import { useAuth } from '../hooks/useAuth'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { OfflineBlocker } from '../components/ui/OfflineBlocker'
 import Logo from '../assets/Logo.jpeg'
 
-// Faculty layout wrapper — blocks HOD from faculty pages
+// Faculty layout wrapper — blocks HOD and students from faculty pages
 function ProtectedLayout({ children }) {
   const { role } = useAuth()
   if (role === 'hod') return <Navigate to="/hod/dashboard" replace />
+  if (role === 'student') return <Navigate to="/student/dashboard" replace />
   return (
     <ProtectedRoute>
       <DashboardLayout>{children}</DashboardLayout>
@@ -30,12 +33,23 @@ function ProtectedLayout({ children }) {
   )
 }
 
-// HOD layout wrapper — blocks faculty from HOD pages
+// HOD layout wrapper — blocks faculty and students from HOD pages
 function HodProtectedRoute({ children }) {
   const { user, role, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   if (role === 'faculty') return <Navigate to="/dashboard" replace />
+  if (role === 'student') return <Navigate to="/student/dashboard" replace />
+  return children
+}
+
+// Student route wrapper — blocks faculty and HOD from student pages
+function StudentProtectedRoute({ children }) {
+  const { user, role, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (role === 'faculty') return <Navigate to="/dashboard" replace />
+  if (role === 'hod') return <Navigate to="/hod/dashboard" replace />
   return children
 }
 
@@ -72,6 +86,8 @@ export function AppRouter() {
         element={
           role === 'hod'
             ? <Navigate to="/hod/dashboard" replace />
+            : role === 'student'
+            ? <Navigate to="/student/dashboard" replace />
             : <Navigate to="/dashboard" replace />
         }
       />
@@ -91,6 +107,11 @@ export function AppRouter() {
       <Route path="/hod/dashboard" element={<HodProtectedRoute><HodDashboard /></HodProtectedRoute>} />
       <Route path="/hod/class/:classId" element={<HodProtectedRoute><HodClassDetail /></HodProtectedRoute>} />
       <Route path="/hod/course/:courseId" element={<HodProtectedRoute><HodCourseDetail /></HodProtectedRoute>} />
+
+      {/* Student routes — isolated, mobile-first, read-only */}
+      <Route path="/student/dashboard" element={<StudentProtectedRoute><StudentDashboard /></StudentProtectedRoute>} />
+      <Route path="/student/course/:courseId" element={<StudentProtectedRoute><StudentCourseDetail /></StudentProtectedRoute>} />
     </Routes>
   )
 }
+

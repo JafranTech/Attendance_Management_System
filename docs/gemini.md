@@ -28,18 +28,19 @@ When this file is loaded, immediately understand the full system context from al
 
 ## Project Identity
 
-**Name:** Faculty Attendance Management System
+**Name:** IT Department ERP — Attendance Management System
 **Type:** Responsive Web Application (PWA)
 **Stack:** React + Vite + Supabase
-**Purpose:** Allow faculty members to quickly mark student attendance, manage course enrollments, track history, and generate formal Excel/PDF reports for administration.
+**Live URL:** https://it-erp.vercel.app
+**Purpose:** A full-stack ERP for the IT Department at B.S. Abdur Rahman Crescent Institute of Science & Technology. Enables faculty to mark student attendance, HODs to monitor department-wide attendance, and students to view their own attendance records in real-time.
 
 ---
 
 ## User Roles
 
-### Faculty (Version 1 Focus)
-- Login securely.
-- Manage **Class Sections** (Master lists of students).
+### Faculty (Version 1 — Complete ✅)
+- Login securely with college email + password.
+- Manage **Class Sections** (Master lists of students in `Classes & Roster`).
 - Assign students from Master Lists into specific **Courses**.
 - Set up weekly timetables.
 - Mark attendance rapidly (Mobile or Desktop) using List, Quick Entry, or Interactive Modes.
@@ -48,7 +49,7 @@ When this file is loaded, immediately understand the full system context from al
 - Monitor **Low Attendance** warnings automatically.
 - Export attendance reports in Excel and PDF formats.
 
-### HOD (Version 2 — Read-Only Monitoring)
+### HOD (Version 2 — Complete ✅)
 - Login with `role = 'hod'` in the `faculty` table.
 - View ALL classes created by any faculty in the department.
 - Drill into a class to see all subjects (courses) mapped to it, along with the faculty name and overall attendance %.
@@ -57,8 +58,16 @@ When this file is loaded, immediately understand the full system context from al
 - View a "Low Attendance" tab listing all students below 75% for a given subject.
 - **Strictly view-only** — cannot mark or edit attendance.
 
-### Future Scopes
-- **Students:** To view their own attendance percentages.
+### Student (Version 3 — ACTIVE 🔧)
+- Login with auto-provisioned credentials: `[roll_number]@crescent.education` / `crescent1234` (must change on first login).
+- Access a **mobile-optimised, read-only** Student Dashboard.
+- View all enrolled subjects as cards showing attendance percentage and progress bar.
+- Click a subject to drill into a full session-by-session history: Date, Period, Present/Absent.
+- Filter attendance records by All / Present / Absent.
+- **Cannot mark, edit, or modify any attendance data whatsoever.**
+- Account is **automatically provisioned** when faculty adds them to the `Classes & Roster`.
+- Account is **automatically deactivated** when faculty removes them from the roster.
+- Managed year-by-year: new batch → new imports → new accounts. Old accounts deactivated.
 
 ---
 
@@ -71,12 +80,12 @@ Optimized UX where all students default to "Present". Faculty can tap on absente
 - **Interactive Mode**: Swipe/tap card-based interface optimized for mobile.
 
 ### 2. Comprehensive Class & Course Management
-- **Classes**: Master rosters for an entire batch. Import via Excel, manage students.
+- **Classes & Roster**: Master rosters for an entire batch. Import via Excel, manage students. Auto-provisions student Supabase accounts on import.
 - **Courses**: Subjects mapped to Classes. Pulls students from the master class list.
 
 ### 2.5. Mobile Optimized Navigation
-- Bottom bar constrained to primary actions (Home, Attend, Courses, History).
-- Hamburger menu handles secondary views (Classes, Low Attendance, Reports, Settings).
+- Bottom bar constrained to primary actions (Home, Attend, Classes, Courses, History).
+- Sidebar on desktop handles all navigation.
 
 ### 3. Audit Trail for Edits
 If a faculty member edits a past attendance record, they must provide a reason, which is logged in the database.
@@ -89,6 +98,26 @@ Set up weekly schedules. System prevents marking attendance on global or faculty
 
 ### 6. Low Attendance Tracking
 Dedicated dashboard to easily identify students falling below required attendance thresholds.
+
+### 7. Student Self-Service Portal (Version 3)
+Mobile-first read-only portal where students can view their own attendance data pulled directly from the same database faculty write to. Real-time single source of truth.
+
+---
+
+## Student Account Auto-Provisioning Rules (Version 3 — CRITICAL)
+
+> These rules are non-negotiable and govern how student accounts are created and destroyed.
+
+1. **Trigger:** When faculty adds or imports a student into `Classes & Roster` (the `students` table), a Supabase Edge Function is triggered.
+2. **Account Creation:** Edge Function calls `supabase.auth.admin.createUser()` with:
+   - `email`: `[roll_number]@crescent.education`
+   - `password`: `crescent1234`
+   - `user_metadata.role`: `'student'`
+3. **Linking:** The returned `auth.users.id` is stored in `students.auth_user_id` column.
+4. **Deactivation:** When faculty removes a student from the roster, the Edge Function calls `supabase.auth.admin.updateUser()` to disable the account (`banned = true`). The auth record is NOT deleted to preserve historical data integrity.
+5. **Re-activation:** If a student is re-added (e.g., readmission), the Edge Function detects the existing account and re-enables it.
+6. **Year Management:** Each academic year, old students are removed (accounts deactivated) and new students imported (new accounts created). The system is inherently stateless per batch.
+7. **Security:** All admin auth operations MUST run in a Supabase Edge Function using the `service_role` key. NEVER expose the service role key to the frontend.
 
 ---
 
@@ -126,8 +155,11 @@ Based on the scope of the changes made, you MUST automatically follow the corres
 ## Non-Negotiable Rules
 
 - **Use the single Supabase client** from `src/lib/supabase.js`. Never create multiple instances.
-- **Never expose the Supabase service role key** in any client code. Use only the anon key.
+- **Never expose the Supabase service role key** in any client code. Use only the anon key. Service role is ONLY for Edge Functions.
 - **Never skip RLS.** Every table must have Row Level Security policies active.
 - **Every form must validate using Zod** before submitting.
 - **Use React Query** for all Supabase data fetching — never fetch in `useEffect` directly.
 - **Plain JavaScript only** — no TypeScript for v1.
+- **Student portal is strictly isolated** — `src/pages/student/` folder only. Never mix with faculty or HOD pages.
+- **Student accounts auto-managed** — never create or delete student auth accounts from the frontend directly. Always use the Edge Function.
+- **Do not break existing faculty or HOD flows** — student portal is additive only.
