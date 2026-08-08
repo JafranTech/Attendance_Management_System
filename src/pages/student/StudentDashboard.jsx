@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { ChevronRight, BookOpen, LogOut, GraduationCap, AlertTriangle } from 'lucide-react'
+import { ChevronRight, BookOpen, LogOut, GraduationCap, AlertTriangle, Settings } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useMyStudentRecord, useMySubjects } from '../../hooks/useStudentPortal'
 import cresLogo from '../../assets/Logo.jpeg'
@@ -129,13 +129,22 @@ export default function StudentDashboard() {
               <p className="text-sm font-bold text-slate-800 leading-tight">Attendance Portal</p>
             </div>
           </div>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-red-500 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign Out
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/student/settings')}
+              className="flex items-center justify-center w-8 h-8 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-500 hover:text-blue-600 transition-colors"
+              title="Settings"
+            >
+              <Settings className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={signOut}
+              className="flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-red-500 transition-colors px-2 py-1.5 rounded-lg hover:bg-red-50"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
 

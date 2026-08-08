@@ -14,8 +14,10 @@ import ClassesPage from '../pages/ClassesPage'
 import HodDashboard from '../pages/hod/HodDashboard'
 import HodClassDetail from '../pages/hod/HodClassDetail'
 import HodCourseDetail from '../pages/hod/HodCourseDetail'
+import HodSettings from '../pages/hod/HodSettings'
 import StudentDashboard from '../pages/student/StudentDashboard'
 import StudentCourseDetail from '../pages/student/StudentCourseDetail'
+import StudentSettings from '../pages/student/StudentSettings'
 import { useAuth } from '../hooks/useAuth'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { OfflineBlocker } from '../components/ui/OfflineBlocker'
@@ -107,10 +109,12 @@ export function AppRouter() {
       <Route path="/hod/dashboard" element={<HodProtectedRoute><HodDashboard /></HodProtectedRoute>} />
       <Route path="/hod/class/:classId" element={<HodProtectedRoute><HodClassDetail /></HodProtectedRoute>} />
       <Route path="/hod/course/:courseId" element={<HodProtectedRoute><HodCourseDetail /></HodProtectedRoute>} />
+      <Route path="/hod/settings" element={<HodProtectedRoute><HodSettings /></HodProtectedRoute>} />
 
       {/* Student routes — isolated, mobile-first, read-only */}
       <Route path="/student/dashboard" element={<StudentProtectedRoute><StudentDashboard /></StudentProtectedRoute>} />
       <Route path="/student/course/:courseId" element={<StudentProtectedRoute><StudentCourseDetail /></StudentProtectedRoute>} />
+      <Route path="/student/settings" element={<StudentProtectedRoute><StudentSettings /></StudentProtectedRoute>} />
     </Routes>
   )
 }

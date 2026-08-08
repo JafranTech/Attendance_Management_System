@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LogOut, ShieldCheck, X } from 'lucide-react'
+import { LogOut, ShieldCheck, X, Settings } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import toast from 'react-hot-toast'
@@ -82,8 +82,8 @@ export function HodLayout({ children, backTo, backLabel }) {
             </button>
           )}
 
-          {/* Right: User + logout */}
-          <div className="flex items-center gap-3 ml-auto">
+          {/* Right: User + settings + logout */}
+          <div className="flex items-center gap-2 sm:gap-3 ml-auto">
             <button
               onClick={handleOpenDrawer}
               className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 transition-colors text-left"
@@ -94,6 +94,13 @@ export function HodLayout({ children, backTo, backLabel }) {
                 <p className="text-xs font-bold text-indigo-900 leading-none">{profile?.name || 'Set Name'}</p>
                 <p className="text-[10px] text-indigo-600 font-medium leading-none mt-0.5">Head of Department</p>
               </div>
+            </button>
+            <button
+              onClick={() => navigate('/hod/settings')}
+              className="flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 hover:text-indigo-600 transition-all"
+              title="Settings"
+            >
+              <Settings className="w-4 h-4" />
             </button>
             <button
               onClick={handleSignOut}
