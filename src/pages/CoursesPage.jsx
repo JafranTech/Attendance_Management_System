@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, BookOpen } from 'lucide-react'
+import { Plus, BookOpen, AlertTriangle, RefreshCw } from 'lucide-react'
 import { useCourses } from '../hooks/useCourses'
 import { CourseCard } from '../components/courses/CourseCard'
 import { AddCourseModal } from '../components/courses/AddCourseModal'
@@ -9,7 +9,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 
 export default function CoursesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const { data: courses, isLoading, isError } = useCourses()
+  const { data: courses, isLoading, isError, refetch } = useCourses()
 
   return (
     <div>
@@ -31,8 +31,19 @@ export default function CoursesPage() {
       {isLoading && <LoadingSpinner />}
 
       {isError && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-4 text-sm text-red-600">
-          Failed to load courses. Please refresh the page.
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-red-50 border border-red-200 rounded-xl p-5">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-red-700 text-sm">Failed to load courses</p>
+            <p className="text-xs text-red-500 mt-0.5">There was a problem connecting. This usually resolves on its own.</p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors flex-shrink-0"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
         </div>
       )}
 

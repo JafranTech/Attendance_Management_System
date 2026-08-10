@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { Users, BookOpen, ChevronRight, AlertTriangle, Calendar } from 'lucide-react'
+import { Users, BookOpen, ChevronRight, AlertTriangle, Calendar, RefreshCw } from 'lucide-react'
 import { HodLayout } from '../../components/hod/HodLayout'
 import { useHodClasses } from '../../hooks/useHod'
 import { useAuth } from '../../hooks/useAuth'
@@ -8,7 +8,7 @@ import cresLogo from '../../assets/Logo.jpeg'
 export default function HodDashboard() {
   const navigate = useNavigate()
   const { profile } = useAuth()
-  const { data: classes, isLoading, isError } = useHodClasses()
+  const { data: classes, isLoading, isError, refetch } = useHodClasses()
 
   const totalClasses = classes?.length ?? 0
   const totalStudents = classes?.reduce((sum, c) => sum + (c.students?.[0]?.count ?? 0), 0) ?? 0
@@ -54,9 +54,19 @@ export default function HodDashboard() {
 
       {/* Error */}
       {isError && (
-        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-2xl p-5 text-red-600">
-          <AlertTriangle className="w-5 h-5 flex-shrink-0" />
-          <span className="font-medium">Failed to load classes. Please refresh the page.</span>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-red-50 border border-red-200 rounded-2xl p-5">
+          <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+          <div className="flex-1">
+            <p className="font-semibold text-red-700">Failed to load classes</p>
+            <p className="text-sm text-red-500 mt-0.5">There was a problem connecting. This usually resolves on its own.</p>
+          </div>
+          <button
+            onClick={() => refetch()}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors flex-shrink-0"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Try Again
+          </button>
         </div>
       )}
 

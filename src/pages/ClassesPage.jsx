@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2, RefreshCw } from 'lucide-react'
+import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2, RefreshCw, AlertTriangle } from 'lucide-react'
 import cresLogo from '../assets/Logo.jpeg'
 import { useClasses } from '../hooks/useClasses'
 import { useClassStudents, useBulkDeleteStudents } from '../hooks/useStudents'
@@ -14,7 +14,7 @@ import toast from 'react-hot-toast'
 import clsx from 'clsx'
 
 export default function ClassesPage() {
-  const { data: classes, isLoading: classesLoading } = useClasses()
+  const { data: classes, isLoading: classesLoading, isError: classesError, refetch: refetchClasses } = useClasses()
   const { user } = useAuth()
 
   // Namespace localStorage key by user ID so Faculty A's selection never bleeds into Faculty B
@@ -117,6 +117,23 @@ export default function ClassesPage() {
   }
 
   if (classesLoading) return <LoadingSpinner />
+
+  if (classesError) return (
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-red-50 border border-red-200 rounded-xl p-5 mt-4">
+      <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5 sm:mt-0" />
+      <div className="flex-1">
+        <p className="font-semibold text-red-700 text-sm">Failed to load class sections</p>
+        <p className="text-xs text-red-500 mt-0.5">There was a problem connecting. This usually resolves on its own.</p>
+      </div>
+      <button
+        onClick={() => refetchClasses()}
+        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors flex-shrink-0"
+      >
+        <RefreshCw className="w-4 h-4" />
+        Try Again
+      </button>
+    </div>
+  )
 
   return (
     <div className="space-y-5">
