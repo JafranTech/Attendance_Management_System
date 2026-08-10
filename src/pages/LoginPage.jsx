@@ -144,14 +144,14 @@ export default function LoginPage() {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5" autoComplete="off">
             {/* Email */}
             <div className="space-y-1.5">
               <Label htmlFor="email">Email Address</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="faculty@crescent.education"
+                autoComplete="off"
                 {...register('email')}
                 className={errors.email ? 'border-red-500 focus-visible:ring-red-500' : ''}
               />
@@ -165,7 +165,7 @@ export default function LoginPage() {
                 <Input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
+                  autoComplete="new-password"
                   {...register('password')}
                   className={`pr-10 ${errors.password ? 'border-red-500 focus-visible:ring-red-500' : ''}`}
                 />
