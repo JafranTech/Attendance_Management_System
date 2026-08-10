@@ -78,10 +78,10 @@ export function useRemoveStudentFromClass(classId) {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (studentId) => {
-      // 1. Fetch the student record to get their roll_number for deactivation
+      // 1. Fetch the student record to get their roll_number and auth_user_id for deactivation
       const { data: student } = await supabase
         .from('students')
-        .select('id, roll_number, name')
+        .select('id, roll_number, name, auth_user_id')
         .eq('id', studentId)
         .single()
 
@@ -91,7 +91,7 @@ export function useRemoveStudentFromClass(classId) {
           await supabase.functions.invoke('provision-student', {
             body: {
               action: 'deactivate',
-              students: [{ roll_number: student.roll_number, name: student.name, student_id: student.id }],
+              students: [{ roll_number: student.roll_number, name: student.name, student_id: student.id, auth_user_id: student.auth_user_id }],
             },
           })
         } catch (deactivateErr) {
@@ -167,7 +167,32 @@ export function useUpdateStudentBatches(courseId) {
 export function useBulkDeleteStudents(classId) {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: (studentIds) => bulkDeleteStudents(studentIds),
+    mutationFn: async (studentIds) => {
+      if (!studentIds || studentIds.length === 0) return
+
+      // 1. Fetch the student records to get their roll_number and auth_user_id for deactivation
+      const { data: students } = await supabase
+        .from('students')
+        .select('id, roll_number, name, auth_user_id')
+        .in('id', studentIds)
+
+      // 2. Deactivate their auth accounts BEFORE removing from DB
+      if (students && students.length > 0) {
+        try {
+          await supabase.functions.invoke('provision-student', {
+            body: {
+              action: 'deactivate',
+              students: students.map(s => ({ roll_number: s.roll_number, name: s.name, student_id: s.id, auth_user_id: s.auth_user_id })),
+            },
+          })
+        } catch (deactivateErr) {
+          console.warn('Deactivation failed (non-critical):', deactivateErr)
+        }
+      }
+
+      // 3. Remove from students table
+      return bulkDeleteStudents(studentIds)
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', 'class', classId] })
       queryClient.invalidateQueries({ queryKey: ['classes'] })

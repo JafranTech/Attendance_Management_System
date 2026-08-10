@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Plus, Upload, ClipboardCheck, Search, AlertTriangle, Layers } from 'lucide-react'
+import { ArrowLeft, Users, Plus, Upload, ClipboardCheck, Search, AlertTriangle, Layers, RefreshCw } from 'lucide-react'
 import clsx from 'clsx'
+import toast from 'react-hot-toast'
 import { useCourse } from '../hooks/useCourses'
-import { useStudents } from '../hooks/useStudents'
+import { useStudents, useEnrollDefaultStudents } from '../hooks/useStudents'
 import { useAllStudentPercentages } from '../hooks/useAttendance'
 import { StudentList } from '../components/students/StudentList'
 import { AddStudentModal } from '../components/students/AddStudentModal'
@@ -30,6 +31,18 @@ export default function CourseDetailPage() {
   const { data: course, isLoading: courseLoading, isError: courseError } = useCourse(courseId)
   const { data: students, isLoading: studentsLoading } = useStudents(courseId)
   const { data: percentages, isLoading: percentagesLoading } = useAllStudentPercentages(courseId)
+  const { mutate: syncClassStudents, isPending: isSyncing } = useEnrollDefaultStudents()
+
+  const handleSyncFromClass = () => {
+    if (!course?.target_class_id) {
+      toast.error('This course does not have a target class assigned.')
+      return
+    }
+    syncClassStudents({ courseId, targetClassId: course.target_class_id }, {
+      onSuccess: () => toast.success('Students synced successfully!'),
+      onError: (err) => toast.error(err.message || 'Failed to sync students.')
+    })
+  }
 
   const { totalCount, noBatchCount, b1Count, b2Count } = useMemo(() => {
     if (!students) return { totalCount: 0, noBatchCount: 0, b1Count: 0, b2Count: 0 }
@@ -158,6 +171,10 @@ export default function CourseDetailPage() {
               <Button variant="outline" onClick={() => setIsAssignBatchesOpen(true)} className="text-purple-600 hover:bg-purple-50 hover:border-purple-200">
                 <Layers className="w-4 h-4 mr-2" />
                 Assign Batches
+              </Button>
+              <Button variant="outline" onClick={handleSyncFromClass} disabled={isSyncing} className="text-blue-600 hover:bg-blue-50 hover:border-blue-200">
+                <RefreshCw className={clsx("w-4 h-4 mr-2", isSyncing && "animate-spin")} />
+                {isSyncing ? 'Syncing...' : 'Sync from Class'}
               </Button>
             </div>
 

@@ -83,17 +83,35 @@ Deno.serve(async (req) => {
           results.push({ roll_number, success: true, auth_user_id: authUserId })
 
         } else if (action === 'deactivate') {
-          // Find auth user by email and ban them
-          const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
-          const existingUser = existingUsers?.users?.find(u => u.email === email)
+          // If auth_user_id is provided, delete the user by ID directly
+          let deleted = false
+          if (student.auth_user_id) {
+            const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(student.auth_user_id)
+            if (!deleteError) {
+              deleted = true
+              results.push({ roll_number, success: true, action: 'deleted' })
+            } else {
+              // If failed to delete, fallback or report error
+              results.push({ roll_number, success: false, error: deleteError.message })
+              continue
+            }
+          }
+          
+          if (!deleted) {
+            // Fallback: Find auth user by email and delete them
+            const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+            const existingUser = existingUsers?.users?.find(u => u.email === email)
 
-          if (existingUser) {
-            await supabaseAdmin.auth.admin.updateUserById(existingUser.id, {
-              ban_duration: '876600h' // 100 years = effectively permanent
-            })
-            results.push({ roll_number, success: true, action: 'banned' })
-          } else {
-            results.push({ roll_number, success: true, action: 'not_found' })
+            if (existingUser) {
+              const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(existingUser.id)
+              if (deleteError) {
+                results.push({ roll_number, success: false, error: deleteError.message })
+              } else {
+                results.push({ roll_number, success: true, action: 'deleted' })
+              }
+            } else {
+              results.push({ roll_number, success: true, action: 'not_found' })
+            }
           }
         }
 
