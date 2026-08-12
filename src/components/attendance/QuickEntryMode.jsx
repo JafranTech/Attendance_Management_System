@@ -32,12 +32,10 @@ export function QuickEntryMode({ students, statuses, setStatuses }) {
     // Then process absentees
     numbers.forEach(num => {
       const matchedStudent = students.find(s => {
-        // Extract the trailing digits of the roll number.
-        // e.g. "IT2021001" -> "1". "IT2021035" -> "35". "IT2021115" -> "115"
-        const match = s.roll_number.match(/(\d+)$/)
-        if (!match) return false
-        const suffix = match[1]
-        
+        // Compare against only the LAST 3 digits of the roll number
+        // (the per-class student serial), not the entire roll number.
+        // e.g. "230081601001" -> "001" -> 1, "230081601014" -> "014" -> 14
+        const suffix = s.roll_number.slice(-3)
         return parseInt(suffix, 10) === parseInt(num, 10)
       })
 
