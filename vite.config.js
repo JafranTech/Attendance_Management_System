@@ -11,7 +11,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
       workbox: {
-        globPatterns: [], // Do not precache anything (online-only mode)
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        maximumFileSizeToCacheInBytes: 15000000,
         cleanupOutdatedCaches: true,
         skipWaiting: true,
         clientsClaim: true,
@@ -20,12 +21,44 @@ export default defineConfig({
         enabled: true
       },
       manifest: {
+        id: '/?source=pwa',
         name: 'Information Technology ERP',
         short_name: 'IT ERP',
         description: 'Manage student attendance efficiently.',
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
+        orientation: 'portrait',
+        dir: 'ltr',
+        categories: ['education', 'productivity'],
+        launch_handler: {
+          client_mode: ['navigate-existing', 'auto']
+        },
+        shortcuts: [
+          {
+            name: 'Attendance',
+            short_name: 'Attendance',
+            description: 'Mark or view attendance',
+            url: '/attendance',
+            icons: [{ src: '/pwa-192x192.png', sizes: '192x192' }]
+          }
+        ],
+        screenshots: [
+          {
+            src: '/screenshot-mobile.png',
+            sizes: '1080x1920',
+            type: 'image/png',
+            form_factor: 'narrow',
+            label: 'Attendance ERP Mobile Home'
+          },
+          {
+            src: '/screenshot-desktop.png',
+            sizes: '1920x1080',
+            type: 'image/png',
+            form_factor: 'wide',
+            label: 'Attendance ERP Desktop Dashboard'
+          }
+        ],
         icons: [
           {
             src: '/pwa-192x192.png',
