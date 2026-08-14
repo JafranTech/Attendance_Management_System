@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 
 # Sitemap
-# Sitemap: https://yourdomain.com/sitemap.xml
+Sitemap: https://it-erp.vercel.app/sitemap.xml
