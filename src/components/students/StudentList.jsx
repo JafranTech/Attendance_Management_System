@@ -6,7 +6,7 @@ import { Badge } from '../ui/Badge'
 import { StudentAttendanceModal } from './StudentAttendanceModal'
 import clsx from 'clsx'
 
-export function StudentList({ students, courseId, classId, selectedIds, onSelectChange, onSelectAll }) {
+export function StudentList({ students, courseId, classId, selectedIds, onSelectChange, onSelectAll, canDelete = true }) {
   const removeStudentCourse = useRemoveStudent(courseId)
   const removeStudentClass = useRemoveStudentFromClass(classId)
   const removeStudent = classId ? removeStudentClass : removeStudentCourse
@@ -107,14 +107,16 @@ export function StudentList({ students, courseId, classId, selectedIds, onSelect
                     ) : '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={(e) => handleRemove(e, student)}
-                      disabled={removeStudent.isPending}
-                      className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 md:p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
-                      aria-label={`Remove ${student.name}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {canDelete && (
+                      <button
+                        onClick={(e) => handleRemove(e, student)}
+                        disabled={removeStudent.isPending}
+                        className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 md:p-1.5 rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                        aria-label={`Remove ${student.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               )

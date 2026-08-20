@@ -74,7 +74,7 @@ export function AuthProvider({ children }) {
 
   // loading = true until BOTH session and profile are resolved
   const loading = session === undefined || profileLoading
-  const role = profile?.role ?? null // 'faculty' | 'hod' | 'student' | null
+  const role = profile?.role ?? null // 'faculty' | 'hod' | 'student' | 'admin' | null
 
   return (
     <AuthContext.Provider value={{ session, user, profile, role, loading, signIn, signOut, updatePassword, fetchProfile }}>

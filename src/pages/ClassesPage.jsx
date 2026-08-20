@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Plus, FileSpreadsheet, Loader2, Users, Search, Trash2, RefreshCw, AlertTriangle, Lock, Info } from 'lucide-react'
 import cresLogo from '../assets/Logo.jpeg'
 import { useClasses } from '../hooks/useClasses'
 import { useClassStudents, useBulkDeleteStudents } from '../hooks/useStudents'
@@ -15,7 +15,8 @@ import clsx from 'clsx'
 
 export default function ClassesPage() {
   const { data: classes, isLoading: classesLoading, isError: classesError, refetch: refetchClasses } = useClasses()
-  const { user } = useAuth()
+  const { user, role } = useAuth()
+  const isAdmin = role === 'admin'
 
   // Namespace localStorage key by user ID so Faculty A's selection never bleeds into Faculty B
   const storageKey = user?.id ? `activeClassId_${user.id}` : 'activeClassId'
@@ -151,7 +152,7 @@ export default function ClassesPage() {
           </p>
         </div>
         <div className="flex items-center gap-3 w-full sm:w-auto flex-wrap">
-          {selectedStudentIds.size > 0 && (
+          {isAdmin && selectedStudentIds.size > 0 && (
             <button
               onClick={handleBulkDelete}
               disabled={bulkDelete.isPending}
@@ -164,34 +165,52 @@ export default function ClassesPage() {
               Delete Selected ({selectedStudentIds.size})
             </button>
           )}
-          <button
-            onClick={handleSyncAllAccounts}
-            disabled={isSyncing}
-            title="Create login accounts for all existing students who don't have one yet"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-60"
-          >
-            {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            {isSyncing ? 'Syncing...' : 'Sync Accounts'}
-          </button>
-          <Button
-            onClick={() => setImportModalOpen(true)}
-            variant="outline"
-            className="flex-1 sm:flex-none bg-white"
-            disabled={!currentClassId}
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-2 text-indigo-600" />
-            Import Excel
-          </Button>
-          <Button
-            onClick={() => setAddStudentModalOpen(true)}
-            className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700"
-            disabled={!currentClassId}
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Add Student
-          </Button>
+          {isAdmin && (
+            <button
+              onClick={handleSyncAllAccounts}
+              disabled={isSyncing}
+              title="Create login accounts for all existing students who don't have one yet"
+              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors disabled:opacity-60"
+            >
+              {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              {isSyncing ? 'Syncing...' : 'Sync Accounts'}
+            </button>
+          )}
+          {isAdmin && (
+            <Button
+              onClick={() => setImportModalOpen(true)}
+              variant="outline"
+              className="flex-1 sm:flex-none bg-white"
+              disabled={!currentClassId}
+            >
+              <FileSpreadsheet className="w-4 h-4 mr-2 text-indigo-600" />
+              Import Excel
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              onClick={() => setAddStudentModalOpen(true)}
+              className="flex-1 sm:flex-none bg-indigo-600 hover:bg-indigo-700"
+              disabled={!currentClassId}
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add Student
+            </Button>
+          )}
         </div>
+
       </div>
+
+      {/* Read-only notice for faculty */}
+      {!isAdmin && (
+        <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+          <Lock className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
+          <p className="text-sm text-blue-700">
+            <span className="font-semibold">View Only.</span> You can view class rosters and assign students to your courses. 
+            To add, import, or delete students from the master list, please contact the <span className="font-semibold">Admin</span>.
+          </p>
+        </div>
+      )}
 
       {/* Class Tabs */}
       <div className="flex flex-wrap items-center gap-2">
@@ -262,9 +281,10 @@ export default function ClassesPage() {
             <StudentList
               students={filteredStudents}
               classId={currentClassId}
-              selectedIds={selectedStudentIds}
-              onSelectChange={handleToggleStudent}
-              onSelectAll={handleSelectAll}
+              selectedIds={isAdmin ? selectedStudentIds : undefined}
+              onSelectChange={isAdmin ? handleToggleStudent : undefined}
+              onSelectAll={isAdmin ? handleSelectAll : undefined}
+              canDelete={isAdmin}
             />
           </div>
         )}

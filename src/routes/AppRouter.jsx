@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from './ProtectedRoute'
 import { DashboardLayout } from '../components/layout/DashboardLayout'
+import { AdminLayout } from '../components/layout/AdminLayout'
 import LoginPage from '../pages/LoginPage'
 import DashboardPage from '../pages/DashboardPage'
 import CoursesPage from '../pages/CoursesPage'
@@ -18,16 +19,21 @@ import HodSettings from '../pages/hod/HodSettings'
 import StudentDashboard from '../pages/student/StudentDashboard'
 import StudentCourseDetail from '../pages/student/StudentCourseDetail'
 import StudentSettings from '../pages/student/StudentSettings'
+import AdminDashboard from '../pages/admin/AdminDashboard'
+import AdminUsersPage from '../pages/admin/AdminUsersPage'
+import AdminClassesPage from '../pages/admin/AdminClassesPage'
+import AdminStudentPasswordsPage from '../pages/admin/AdminStudentPasswordsPage'
 import { useAuth } from '../hooks/useAuth'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import { OfflineBlocker } from '../components/ui/OfflineBlocker'
 import Logo from '../assets/Logo.jpeg'
 
-// Faculty layout wrapper — blocks HOD and students from faculty pages
+// Faculty layout wrapper — blocks HOD, admin, and students from faculty pages
 function ProtectedLayout({ children }) {
   const { role } = useAuth()
   if (role === 'hod') return <Navigate to="/hod/dashboard" replace />
   if (role === 'student') return <Navigate to="/student/dashboard" replace />
+  if (role === 'admin') return <Navigate to="/admin/dashboard" replace />
   return (
     <ProtectedRoute>
       <DashboardLayout>{children}</DashboardLayout>
@@ -35,23 +41,36 @@ function ProtectedLayout({ children }) {
   )
 }
 
-// HOD layout wrapper — blocks faculty and students from HOD pages
+// Admin layout wrapper — only admins can access /admin/* routes
+function AdminProtectedRoute({ children }) {
+  const { user, role, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (role !== 'admin') return <Navigate to="/login" replace />
+  return (
+    <AdminLayout>{children}</AdminLayout>
+  )
+}
+
+// HOD layout wrapper — blocks faculty, admin, and students from HOD pages
 function HodProtectedRoute({ children }) {
   const { user, role, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   if (role === 'faculty') return <Navigate to="/dashboard" replace />
   if (role === 'student') return <Navigate to="/student/dashboard" replace />
+  if (role === 'admin') return <Navigate to="/admin/dashboard" replace />
   return children
 }
 
-// Student route wrapper — blocks faculty and HOD from student pages
+// Student route wrapper — blocks faculty, HOD, and admin from student pages
 function StudentProtectedRoute({ children }) {
   const { user, role, loading } = useAuth()
   if (loading) return null
   if (!user) return <Navigate to="/login" replace />
   if (role === 'faculty') return <Navigate to="/dashboard" replace />
   if (role === 'hod') return <Navigate to="/hod/dashboard" replace />
+  if (role === 'admin') return <Navigate to="/admin/dashboard" replace />
   return children
 }
 
@@ -90,6 +109,8 @@ export function AppRouter() {
             ? <Navigate to="/hod/dashboard" replace />
             : role === 'student'
             ? <Navigate to="/student/dashboard" replace />
+            : role === 'admin'
+            ? <Navigate to="/admin/dashboard" replace />
             : <Navigate to="/dashboard" replace />
         }
       />
@@ -115,6 +136,12 @@ export function AppRouter() {
       <Route path="/student/dashboard" element={<StudentProtectedRoute><StudentDashboard /></StudentProtectedRoute>} />
       <Route path="/student/course/:courseId" element={<StudentProtectedRoute><StudentCourseDetail /></StudentProtectedRoute>} />
       <Route path="/student/settings" element={<StudentProtectedRoute><StudentSettings /></StudentProtectedRoute>} />
+
+      {/* Admin routes — fully isolated from faculty/hod/student */}
+      <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
+      <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsersPage /></AdminProtectedRoute>} />
+      <Route path="/admin/classes" element={<AdminProtectedRoute><AdminClassesPage /></AdminProtectedRoute>} />
+      <Route path="/admin/student-passwords" element={<AdminProtectedRoute><AdminStudentPasswordsPage /></AdminProtectedRoute>} />
     </Routes>
   )
 }

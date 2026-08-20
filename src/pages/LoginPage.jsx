@@ -35,7 +35,10 @@ export default function LoginPage() {
   const { role } = useAuth()
 
   if (!loading && session) {
-    return <Navigate to={role === 'hod' ? '/hod/dashboard' : '/dashboard'} replace />
+    if (role === 'hod') return <Navigate to="/hod/dashboard" replace />
+    if (role === 'admin') return <Navigate to="/admin/dashboard" replace />
+    if (role === 'student') return <Navigate to="/student/dashboard" replace />
+    return <Navigate to="/dashboard" replace />
   }
 
   const onSubmit = async (data) => {
@@ -51,6 +54,10 @@ export default function LoginPage() {
       toast.success('Login successful!')
       if (profile?.role === 'hod') {
         navigate('/hod/dashboard', { replace: true })
+      } else if (profile?.role === 'admin') {
+        navigate('/admin/dashboard', { replace: true })
+      } else if (result.user.user_metadata?.role === 'student') {
+        navigate('/student/dashboard', { replace: true })
       } else {
         navigate('/dashboard', { replace: true })
       }
