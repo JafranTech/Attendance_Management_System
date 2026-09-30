@@ -9,6 +9,7 @@ import { LogIn, Loader2, Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import Logo from '../assets/Logo.jpeg'
 import CrescLogo from '../assets/campus-bg.webp'
+import CampusMobileBg from '../assets/campus-mobile.webp'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { Label } from '../components/ui/Label'
@@ -87,9 +88,9 @@ export default function LoginPage() {
   if (isMobile) {
     return (
       <div
-        className="min-h-screen min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 bg-cover bg-center bg-no-repeat relative selection:bg-indigo-500 selection:text-white"
+        className="min-h-screen min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 bg-cover bg-bottom bg-no-repeat relative selection:bg-indigo-500 selection:text-white"
         style={{
-          backgroundImage: `url("${CrescLogo}")`,
+          backgroundImage: `url("${CampusMobileBg}")`,
         }}
       >
         {/* Subtle background shade for contrast */}
