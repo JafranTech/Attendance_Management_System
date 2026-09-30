@@ -88,7 +88,7 @@ export default function LoginPage() {
   if (isMobile) {
     return (
       <div
-        className="min-h-screen min-h-[100dvh] w-full flex items-center justify-center p-4 sm:p-6 bg-cover bg-bottom bg-no-repeat relative selection:bg-indigo-500 selection:text-white"
+        className="h-screen h-[100dvh] w-full flex flex-col items-center justify-center p-4 bg-cover bg-bottom bg-no-repeat relative selection:bg-indigo-500 selection:text-white overflow-hidden"
         style={{
           backgroundImage: `url("${CampusMobileBg}")`,
         }}
@@ -96,9 +96,9 @@ export default function LoginPage() {
         {/* Subtle background shade for contrast */}
         <div className="absolute inset-0 bg-black/15 pointer-events-none" />
 
-        {/* Glassmorphic Login Card */}
+        {/* Glassmorphic Login Card - Compact & lifted into the sky to leave building visible below */}
         <div
-          className="relative z-10 w-full max-w-[390px] rounded-[28px] p-6 sm:p-9 text-center text-white"
+          className="relative z-10 w-full max-w-[360px] rounded-[24px] p-5 sm:p-7 text-center text-white -translate-y-3 sm:-translate-y-5"
           style={{
             background: 'rgba(255, 255, 255, 0.14)',
             backdropFilter: 'blur(20px)',
@@ -108,7 +108,7 @@ export default function LoginPage() {
           }}
         >
           {/* Institute Logo Badge */}
-          <div className="w-[88px] h-[88px] rounded-[22px] bg-white p-2.5 mx-auto mb-5 flex items-center justify-center shadow-lg shadow-black/15">
+          <div className="w-[72px] h-[72px] rounded-[18px] bg-white p-2 mx-auto mb-3 flex items-center justify-center shadow-lg shadow-black/15">
             <img
               src={Logo}
               alt="Institute Logo"
@@ -117,35 +117,35 @@ export default function LoginPage() {
           </div>
 
           {/* Heading */}
-          <h1 className="text-[22px] sm:text-[25px] font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
+          <h1 className="text-[20px] sm:text-[23px] font-bold leading-tight tracking-tight text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.35)]">
             Information Technology ERP
           </h1>
-          <p className="text-[11px] sm:text-[12px] font-medium tracking-[2.2px] uppercase text-white/85 mt-1.5 mb-7 drop-shadow-sm">
+          <p className="text-[10px] sm:text-[11px] font-medium tracking-[2px] uppercase text-white/85 mt-1 mb-4 drop-shadow-sm">
             Attendance Management System
           </p>
 
           {/* Form */}
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-left" autoComplete="off">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-3 text-left" autoComplete="off">
             {/* Email Field */}
-            <div className="space-y-1.5">
-              <label htmlFor="email" className="block text-[13px] font-medium text-white/95 drop-shadow-sm">
+            <div className="space-y-1">
+              <label htmlFor="email" className="block text-[12px] font-medium text-white/95 drop-shadow-sm">
                 Email Address
               </label>
               <div
-                className={`relative flex items-center rounded-[15px] overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-white/40 ${
+                className={`relative flex items-center rounded-[14px] overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-white/40 ${
                   errors.email
                     ? 'border border-red-400 bg-red-500/10'
                     : 'border border-white/35 bg-white/20 focus-within:border-white focus-within:bg-white/25'
                 }`}
               >
-                <Mail className="w-[18px] h-[18px] text-white/85 ml-4 shrink-0" />
+                <Mail className="w-4 h-4 text-white/85 ml-3.5 shrink-0" />
                 <input
                   id="email"
                   type="email"
                   autoComplete="off"
                   placeholder="Enter your email"
                   {...register('email')}
-                  className="w-full bg-transparent border-none text-white text-[15px] placeholder:text-white/60 py-3.5 pl-3 pr-4 focus:outline-none focus:ring-0"
+                  className="w-full bg-transparent border-none text-white text-[14px] placeholder:text-white/60 py-2.5 sm:py-3 pl-2.5 pr-4 focus:outline-none focus:ring-0"
                 />
               </div>
               {errors.email && (
@@ -154,33 +154,33 @@ export default function LoginPage() {
             </div>
 
             {/* Password Field */}
-            <div className="space-y-1.5">
-              <label htmlFor="password" className="block text-[13px] font-medium text-white/95 drop-shadow-sm">
+            <div className="space-y-1">
+              <label htmlFor="password" className="block text-[12px] font-medium text-white/95 drop-shadow-sm">
                 Password
               </label>
               <div
-                className={`relative flex items-center rounded-[15px] overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-white/40 ${
+                className={`relative flex items-center rounded-[14px] overflow-hidden transition-all duration-200 focus-within:ring-2 focus-within:ring-white/40 ${
                   errors.password
                     ? 'border border-red-400 bg-red-500/10'
                     : 'border border-white/35 bg-white/20 focus-within:border-white focus-within:bg-white/25'
                 }`}
               >
-                <Lock className="w-[18px] h-[18px] text-white/85 ml-4 shrink-0" />
+                <Lock className="w-4 h-4 text-white/85 ml-3.5 shrink-0" />
                 <input
                   id="password"
                   type={showPassword ? 'text' : 'password'}
                   autoComplete="new-password"
                   placeholder="Enter your password"
                   {...register('password')}
-                  className="w-full bg-transparent border-none text-white text-[15px] placeholder:text-white/60 py-3.5 pl-3 pr-11 focus:outline-none focus:ring-0"
+                  className="w-full bg-transparent border-none text-white text-[14px] placeholder:text-white/60 py-2.5 sm:py-3 pl-2.5 pr-10 focus:outline-none focus:ring-0"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-white/75 hover:text-white transition-colors p-1 focus:outline-none"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/75 hover:text-white transition-colors p-1 focus:outline-none"
                   aria-label={showPassword ? 'Hide password' : 'Show password'}
                 >
-                  {showPassword ? <EyeOff className="w-[18px] h-[18px]" /> : <Eye className="w-[18px] h-[18px]" />}
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
               {errors.password && (
@@ -189,11 +189,11 @@ export default function LoginPage() {
             </div>
 
             {/* Submit Button */}
-            <div className="pt-2">
+            <div className="pt-1.5">
               <button
                 type="submit"
                 disabled={isLoggingIn || loading}
-                className="w-full py-3.5 px-4 rounded-[15px] text-white font-semibold text-[15px] sm:text-[16px] flex items-center justify-center gap-2.5 transition-all duration-200 active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+                className="w-full py-3 px-4 rounded-[14px] text-white font-semibold text-[14px] sm:text-[15px] flex items-center justify-center gap-2 transition-all duration-200 active:scale-[0.98] disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
                 style={{
                   background: 'linear-gradient(135deg, #6d5bf0 0%, #4834e0 100%)',
                   boxShadow: '0 6px 20px rgba(72, 52, 224, 0.55)',
@@ -201,12 +201,12 @@ export default function LoginPage() {
               >
                 {isLoggingIn ? (
                   <>
-                    <Loader2 className="w-[18px] h-[18px] animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                     <span>Signing in...</span>
                   </>
                 ) : (
                   <>
-                    <LogIn className="w-[18px] h-[18px]" />
+                    <LogIn className="w-4 h-4" />
                     <span>Sign In</span>
                   </>
                 )}
@@ -215,7 +215,7 @@ export default function LoginPage() {
           </form>
 
           {/* Footer */}
-          <p className="text-center text-[11px] sm:text-[12px] text-white/80 mt-6 font-normal drop-shadow-sm">
+          <p className="text-center text-[10px] sm:text-[11px] text-white/80 mt-4 font-normal drop-shadow-sm">
             © {new Date().getFullYear()} Crescent Institute of Science &amp; Technology
           </p>
         </div>
